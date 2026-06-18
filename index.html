@@ -1273,7 +1273,7 @@ function renderEditGrid(){
           <span style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">＋散装</span>
           <input type="number" class="note-input" placeholder="個数" min="0" inputmode="numeric" enterkeyhint="done" maxlength="10"
             value="${v.loose||''}"
-            oninput="editSetLoose(${ri},${vi},this.value)"
+            oninput="editForm[${ri}].variants[${vi}].loose=this.value" onblur="editSetLoose(${ri},${vi},this.value)"
             onkeydown="if(event.key==='Enter'){this.blur();}"
             style="width:80px;font-size:12px;padding:4px 8px;border:1px dashed #CBD5E1;border-radius:6px;outline:none;color:var(--text-secondary);background:#FAFAFA;text-align:right;"
             onfocus="this.style.borderColor='var(--blue-mid)'" onblur="this.style.borderColor='#CBD5E1'">
@@ -1387,35 +1387,54 @@ window.renderDashboard=async function(){
   let channelBoxesMap={};
 
   if(hasAnyChannelStock){
-    // 初期配分データも取得（棚卸がない通路に使用）
-    try{ const snap=await get(ref(db,'distHistory')); distCache=snap.val()||{}; }catch(e){}
     try{ const snap2=await get(ref(db,'transferHistory')); transferCache=snap2.val()||{}; }catch(e){}
-    const distMap=calcDistMapWithTransfer(d);
+
+    // 各通路の棚卸日を取得
+    const stocktakeDates={};
+    await Promise.all(channels.map(async ch=>{
+      stocktakeDates[ch]=await getChannelStockDate(ch,d);
+    }));
 
     CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>{
-      let boxes=0, loose=0;
       let deptB=0,ecB=0,ecDeptB=0,otherB=0;
+      const p=priceMap[item]||{};
+
       channels.forEach(ch=>{
         const chItem=chStocks[ch][item]||null;
         const hasStock=chItem&&((chItem.boxes||0)>0||(chItem.loose||0)>0||(chItem.deptBoxes||0)>0);
-        if(hasStock){
-          if(ch==='VT百貨'){ deptB+=chItem.boxes||0; boxes+=chItem.boxes||0; loose+=chItem.loose||0; }
-          else if(ch==='EC'){ ecB+=chItem.boxes||0; ecDeptB+=chItem.deptBoxes||0; boxes+=chItem.boxes+(chItem.deptBoxes||0); loose+=chItem.loose||0; }
-          else { otherB+=chItem.boxes||0; boxes+=chItem.boxes||0; loose+=chItem.loose||0; }
-        } else {
-          const distBoxes=distMap[item]?.[ch==='VT百貨'?'VT百貨':ch]?.boxes||0;
-          const distLoose=distMap[item]?.[ch==='VT百貨'?'VT百貨':ch]?.loose||0;
-          if(ch==='VT百貨'){ deptB+=distBoxes; boxes+=distBoxes; loose+=distLoose; }
-          else if(ch==='EC'){
-            const distDeptBoxes=distMap[item]?.EC?.deptBoxes||0;
-            ecB+=distBoxes; ecDeptB+=distDeptBoxes;
-            boxes+=distBoxes+distDeptBoxes; loose+=distLoose;
-          }
-          else { otherB+=distBoxes; boxes+=distBoxes; loose+=distLoose; }
-        }
+        let chBoxes=hasStock?(ch==='EC'?(chItem.boxes||0):(chItem.boxes||0)):0;
+        let chDeptBoxes=hasStock&&ch==='EC'?(chItem.deptBoxes||0):0;
+
+        // 棚卸日以降の調貨を適用
+        const stDate=stocktakeDates[ch]||'0000-00-00';
+        Object.keys(transferCache).filter(date=>date>stDate&&date<=d).sort().forEach(date=>{
+          (transferCache[date]||[]).forEach(t=>{
+            if(t.item!==item) return;
+            const boxQty=ch==='EC'?(p.ecQty||p.qty||1):(p.qty||1);
+            const units=t.units||(t.boxes||0)*boxQty;
+            if(t.from===ch){
+              chBoxes=Math.max(0,chBoxes-Math.floor(units/boxQty));
+            }
+            if(t.to===ch&&!(t.from==='VT百貨'&&ch==='EC')){
+              chBoxes+=Math.floor(units/boxQty);
+            }
+            if(t.from==='VT百貨'&&t.to==='EC'&&ch==='EC'){
+              chDeptBoxes+=Math.floor(units/(p.qty||1));
+            }
+            if(t.from==='EC'&&t.to==='VT百貨'&&ch==='EC'){
+              chDeptBoxes=Math.max(0,chDeptBoxes-Math.floor(units/(p.qty||1)));
+            }
+          });
+        });
+
+        if(ch==='VT百貨'){ deptB+=chBoxes; }
+        else if(ch==='EC'){ ecB+=chBoxes; ecDeptB+=chDeptBoxes; }
+        else { otherB+=chBoxes; }
       });
-      if(boxes>0||loose>0){
-        stockMap[item]={boxes,loose};
+
+      const totalBoxes=deptB+ecB+ecDeptB+otherB;
+      if(totalBoxes>0){
+        stockMap[item]={boxes:totalBoxes,loose:0};
         channelBoxesMap[item]={dept:deptB,ec:ecB,ecDept:ecDeptB,other:otherB};
       }
     }));
@@ -1808,32 +1827,36 @@ window.renderGuestDashboard=async function(){
   let stockMap={};
   let guestChannelBoxesMap={};
   if(hasAnyChannelStock){
-    try{ const snap=await get(ref(db,'distHistory')); distCache=snap.val()||{}; }catch(e){}
     try{ const snap2=await get(ref(db,'transferHistory')); transferCache=snap2.val()||{}; }catch(e){}
-    const distMap=calcDistMapWithTransfer(d);
+    const stocktakeDates={};
+    await Promise.all(channels.map(async ch=>{ stocktakeDates[ch]=await getChannelStockDate(ch,d); }));
     CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>{
-      let boxes=0, loose=0;
       let deptB=0,ecB=0,ecDeptB=0,otherB=0;
+      const p=priceMap[item]||{};
       channels.forEach(ch=>{
         const chItem=chStocks[ch][item]||null;
         const hasStock=chItem&&((chItem.boxes||0)>0||(chItem.loose||0)>0||(chItem.deptBoxes||0)>0);
-        if(hasStock){
-          if(ch==='VT百貨'){ deptB+=chItem.boxes||0; boxes+=chItem.boxes||0; loose+=chItem.loose||0; }
-          else if(ch==='EC'){ ecB+=chItem.boxes||0; ecDeptB+=chItem.deptBoxes||0; boxes+=chItem.boxes+(chItem.deptBoxes||0); loose+=chItem.loose||0; }
-          else { otherB+=chItem.boxes||0; boxes+=chItem.boxes||0; loose+=chItem.loose||0; }
-        } else {
-          const distBoxes=distMap[item]?.[ch==='VT百貨'?'VT百貨':ch]?.boxes||0;
-          const distLoose=distMap[item]?.[ch==='VT百貨'?'VT百貨':ch]?.loose||0;
-          if(ch==='VT百貨'){ deptB+=distBoxes; boxes+=distBoxes; loose+=distLoose; }
-          else if(ch==='EC'){
-            const distDeptBoxes=distMap[item]?.EC?.deptBoxes||0;
-            ecB+=distBoxes; ecDeptB+=distDeptBoxes; boxes+=distBoxes+distDeptBoxes; loose+=distLoose;
-          }
-          else { otherB+=distBoxes; boxes+=distBoxes; loose+=distLoose; }
-        }
+        let chBoxes=hasStock?(chItem.boxes||0):0;
+        let chDeptBoxes=hasStock&&ch==='EC'?(chItem.deptBoxes||0):0;
+        const stDate=stocktakeDates[ch]||'0000-00-00';
+        Object.keys(transferCache).filter(date=>date>stDate&&date<=d).sort().forEach(date=>{
+          (transferCache[date]||[]).forEach(t=>{
+            if(t.item!==item) return;
+            const boxQty=ch==='EC'?(p.ecQty||p.qty||1):(p.qty||1);
+            const units=t.units||(t.boxes||0)*boxQty;
+            if(t.from===ch) chBoxes=Math.max(0,chBoxes-Math.floor(units/boxQty));
+            if(t.to===ch&&!(t.from==='VT百貨'&&ch==='EC')) chBoxes+=Math.floor(units/boxQty);
+            if(t.from==='VT百貨'&&t.to==='EC'&&ch==='EC') chDeptBoxes+=Math.floor(units/(p.qty||1));
+            if(t.from==='EC'&&t.to==='VT百貨'&&ch==='EC') chDeptBoxes=Math.max(0,chDeptBoxes-Math.floor(units/(p.qty||1)));
+          });
+        });
+        if(ch==='VT百貨') deptB+=chBoxes;
+        else if(ch==='EC'){ ecB+=chBoxes; ecDeptB+=chDeptBoxes; }
+        else otherB+=chBoxes;
       });
-      if(boxes>0||loose>0){
-        stockMap[item]={boxes,loose};
+      const totalBoxes=deptB+ecB+ecDeptB+otherB;
+      if(totalBoxes>0){
+        stockMap[item]={boxes:totalBoxes,loose:0};
         guestChannelBoxesMap[item]={dept:deptB,ec:ecB,ecDept:ecDeptB,other:otherB};
       }
     }));
@@ -2997,6 +3020,7 @@ window.addTransferRow = function(){
   const from = document.getElementById('transferFrom').value;
   const to = document.getElementById('transferTo').value;
   const note = document.getElementById('transferNote').value.trim();
+  const d = document.getElementById('transferDateInput').value;
   if(!item){ alert('品目を選択してください'); return; }
   if(!from){ alert('出荷元を選択してください'); return; }
   if(!to){ alert('入荷先を選択してください'); return; }
@@ -3006,20 +3030,60 @@ window.addTransferRow = function(){
   const p = priceMap[item]||{};
   const fromBoxQty = from==='EC'?(p.ecQty||p.qty||1):(p.qty||1);
   const toBoxQty   = to==='EC'  ?(p.ecQty||p.qty||1):(p.qty||1);
-
-  // 個数に換算
   const units = transferInputMode==='boxes' ? inputVal * fromBoxQty : inputVal;
 
-  const fromBoxes  = Math.floor(units/fromBoxQty);
-  const fromLoose  = units % fromBoxQty;
-  const toBoxes    = Math.floor(units/toBoxQty);
-  const toLoose    = units % toBoxQty;
+  // 在庫チェック：FROM通路の現在庫存を計算
+  const fromChannel = from;
+  let currentBoxes = 0;
+  // channelStockから最新棚卸を取得
+  const chKey = from==='VT百貨'?'VT百貨':from;
+  get(ref(db,`channelStock/${chKey}`)).then(snap=>{
+    const data=snap.val()||{};
+    const dates=Object.keys(data).filter(dt=>dt<=d).sort();
+    let stocktakeDate='0000-00-00';
+    if(dates.length>0){
+      stocktakeDate=dates[dates.length-1];
+      const raw=data[stocktakeDate]||{};
+      const val=raw[item];
+      if(typeof val==='object') currentBoxes=(val.boxes||0)+(from==='EC'?val.deptBoxes||0:0);
+      else currentBoxes=Number(val)||0;
+    }
+    // 棚卸後の調貨を適用
+    Object.keys(transferCache).filter(date=>date>stocktakeDate&&date<=d).sort().forEach(date=>{
+      (transferCache[date]||[]).forEach(t=>{
+        if(t.item!==item) return;
+        const tUnits=t.units||(t.boxes||0)*fromBoxQty;
+        if(t.from===from) currentBoxes=Math.max(0,currentBoxes-Math.floor(tUnits/fromBoxQty));
+        if(t.to===from) currentBoxes+=Math.floor(tUnits/fromBoxQty);
+      });
+    });
+    // 未保存の pending も含める
+    pendingTransfers.forEach(t=>{
+      if(t.item!==item) return;
+      if(t.from===from) currentBoxes=Math.max(0,currentBoxes-t.fromBoxes);
+      if(t.to===from) currentBoxes+=t.toBoxes;
+    });
 
-  pendingTransfers.push({item, units, from, to, note, fromBoxes, fromLoose, toBoxes, toLoose});
-  document.getElementById('transferUnits').value='';
-  document.getElementById('transferConvertPreview').textContent='';
-  document.getElementById('transferNote').value='';
-  renderPendingTransfers();
+    const needBoxes = Math.ceil(units/fromBoxQty);
+    if(currentBoxes < needBoxes){
+      alert(`在庫不足！\n${from} の現在庫存：${currentBoxes}箱\n必要箱数：${needBoxes}箱`);
+      return;
+    }
+
+    const fromBoxes  = Math.floor(units/fromBoxQty);
+    const fromLoose  = units % fromBoxQty;
+    const toBoxes    = Math.floor(units/toBoxQty);
+    const toLoose    = units % toBoxQty;
+
+    pendingTransfers.push({item, units, from, to, note, fromBoxes, fromLoose, toBoxes, toLoose});
+    document.getElementById('transferUnits').value='';
+    document.getElementById('transferConvertPreview').textContent='';
+    document.getElementById('transferNote').value='';
+    renderPendingTransfers();
+    updateTransferPreview();
+  }).catch(()=>{
+    alert('在庫の確認に失敗しました。再試行してください。');
+  });
 };
 
 function renderPendingTransfers(){
@@ -3399,29 +3463,26 @@ window.renderChannelDash=async function(tabId, channelKey){
 };
 
 // ── EC在庫 ──
-window.renderECDash=async function(){
-  const d=document.getElementById('ecDateInput').value;
+window.renderECDash=async function(){ await renderECDashInto(document.getElementById('ecDateInput')?.value,'ecGrid','ecSummary','ec'); };
+
+async function renderECDashInto(d, gridId, summaryId, unitKey){
   if(!d) return;
   const chStock=await getChannelStock('EC',d);
   const useChannelStock=Object.keys(chStock).length>0;
   try{ const snap=await get(ref(db,'transferHistory')); transferCache=snap.val()||{}; }catch(e){}
-  let distMap={};
-  if(!useChannelStock){
-    try{ const snap=await get(ref(db,'distHistory')); distCache=snap.val()||{}; }catch(e){}
-    distMap=calcDistMapWithTransfer(d);
-  }
+  // 棚卸+調貨モード：初期配分は使用しない
   const ecStocktakeDate=useChannelStock?await getChannelStockDate('EC',d):'0000-00-00';
-  const showUnit=channelShowUnit['ec']||false;
+  const showUnit=channelShowUnit[unitKey]||false;
   let totalBoxes=0, totalItems=0, totalValue=0;
-  const grid=document.getElementById('ecGrid'); grid.innerHTML='';
+  const grid=document.getElementById(gridId); grid.innerHTML='';
   CP_BRANDS_CONFIG.forEach(br=>{
     const card=document.createElement('div'); card.className='brand-card';
     let brVal=0;
     const rows=br.items.map(item=>{
       const chItem=chStock[item]||{boxes:0,loose:0,deptBoxes:0};
-      let boxes=useChannelStock?chItem.boxes:(distMap[item]?.EC?.boxes||0);
-      let loose=useChannelStock?chItem.loose:(distMap[item]?.EC?.loose||0);
-      let deptBoxes=useChannelStock?(chItem.deptBoxes||0):(distMap[item]?.EC?.deptBoxes||0);
+      let boxes=useChannelStock?chItem.boxes:0;
+      let loose=useChannelStock?chItem.loose:0;
+      let deptBoxes=useChannelStock?(chItem.deptBoxes||0):0;
       const p=priceMap[item]||{};
       const ecBoxQty2=p.ecQty||p.qty||1;
       const deptBoxQty2=p.qty||1;
@@ -3458,8 +3519,8 @@ window.renderECDash=async function(){
     card.innerHTML=`<div class="brand-header ${br.cls}">${br.label}</div>${rows}${footer}`;
     grid.appendChild(card);
   });
-  const srcLabel=useChannelStock?'棚卸±調貨':'配分';
-  document.getElementById('ecSummary').innerHTML=`
+  const srcLabel=useChannelStock?'棚卸±調貨':'調貨のみ';
+  document.getElementById(summaryId).innerHTML=`
     <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">EC 品目数（${srcLabel}）</div><div class="stat-v" style="color:#0C447C">${totalItems}</div></div>
     <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">EC 総箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
     <div class="stat" style="background:#FFF8E1;border-color:#FFD54F"><div class="stat-l" style="color:#E65100">EC 金額</div><div class="stat-v" style="color:#BF360C;font-size:16px;">${totalValue>0?'¥'+totalValue.toLocaleString():'—'}</div></div>
@@ -3467,16 +3528,17 @@ window.renderECDash=async function(){
 };
 
 // ── 百貨在庫（通路棚卸優先、なければ総量−EC−WEB−買取）──
-window.renderDeptDash=async function(){
-  const d=document.getElementById('deptDateInput').value;
+window.renderDeptDash=async function(){ await renderDeptDashInto(document.getElementById('deptDateInput')?.value,'deptGrid','deptSummary','dept'); };
+
+async function renderDeptDashInto(d, gridId, summaryId, unitKey){
   if(!d) return;
   const chStock=await getChannelStock('VT百貨',d);
   const useChannelStock=Object.keys(chStock).length>0;
-  const showUnit=channelShowUnit['dept']||false;
+  const showUnit=channelShowUnit[unitKey]||false;
   // 調貨データを常に取得
   try{ const snap=await get(ref(db,'transferHistory')); transferCache=snap.val()||{}; }catch(e){}
   let totalBoxes=0, totalItems=0, totalValue=0;
-  const grid=document.getElementById('deptGrid'); grid.innerHTML='';
+  const grid=document.getElementById(gridId); grid.innerHTML='';
 
   if(useChannelStock){
     // 棚卸日以降の調貨のみ適用
@@ -3513,39 +3575,44 @@ window.renderDeptDash=async function(){
       card.innerHTML=`<div class="brand-header ${br.cls}">${br.label}</div>${rows}${footer}`;
       grid.appendChild(card);
     });
-    document.getElementById('deptSummary').innerHTML=`
+    document.getElementById(summaryId).innerHTML=`
       <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">百貨 品目数（棚卸±調貨）</div><div class="stat-v" style="color:#0C447C">${totalItems}</div></div>
       <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">百貨 総箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
       <div class="stat" style="background:#FFF8E1;border-color:#FFD54F"><div class="stat-l" style="color:#E65100">百貨 金額</div><div class="stat-v" style="color:#BF360C;font-size:16px;">${totalValue>0?'¥'+totalValue.toLocaleString():'—'}</div></div>
       <div class="stat"><div class="stat-l">計算日</div><div class="stat-v" style="font-size:15px;">${d}</div></div>`;
   } else {
-    // 初期配分＋調貨から VT百貨 を直接取得
-    try{ const snap=await get(ref(db,'distHistory')); distCache=snap.val()||{}; }catch(e){}
-    try{ const snap2=await get(ref(db,'transferHistory')); transferCache=snap2.val()||{}; }catch(e){}
-    const distMap=calcDistMapWithTransfer(d);
+    // 棚卸なし → 調貨の累積のみ表示
+    try{ const snap=await get(ref(db,'transferHistory')); transferCache=snap.val()||{}; }catch(e){}
     CP_BRANDS_CONFIG.forEach(br=>{
       const card=document.createElement('div'); card.className='brand-card';
       let brVal=0;
       const rows=br.items.map(item=>{
-        const vtData=distMap[item]?.['VT百貨']||{boxes:0,loose:0};
-        const deptBoxes=vtData.boxes||0;
-        const deptLoose=vtData.loose||0;
-        const isEmpty=deptBoxes===0&&deptLoose===0;
-        if(!isEmpty){ totalItems++; totalBoxes+=deptBoxes; }
+        let boxes=0, loose=0;
         const p=priceMap[item]||{};
-        const val=deptBoxes*(p.qty||0)*(p.price||0);
+        const deptBoxQty=p.qty||1;
+        Object.keys(transferCache).filter(date=>date<=d).sort().forEach(date=>{
+          (transferCache[date]||[]).forEach(t=>{
+            if(t.item!==item) return;
+            const units=t.units||(t.boxes||0)*deptBoxQty;
+            if(t.from==='VT百貨'){ boxes=Math.max(0,boxes-Math.floor(units/deptBoxQty)); loose=Math.max(0,loose-units%deptBoxQty); }
+            if(t.to==='VT百貨'){ boxes+=Math.floor(units/deptBoxQty); loose+=units%deptBoxQty; }
+          });
+        });
+        const isEmpty=boxes===0&&loose===0;
+        if(!isEmpty){ totalItems++; totalBoxes+=boxes; }
+        const val=boxes*(p.qty||0)*(p.price||0);
         brVal+=val; totalValue+=val;
         let display;
-        if(showUnit && p.qty>0){ display=`${deptBoxes*p.qty+(deptLoose||0)} 個`; }
-        else { display=deptBoxes>0?`${deptBoxes}箱${deptLoose>0?` +${deptLoose}個`:''}`:(deptLoose>0?`0 箱 +${deptLoose}個`:`0 箱`); }
+        if(showUnit && p.qty>0) display=`${boxes*p.qty+(loose||0)} 個`;
+        else display=boxes>0?`${boxes}箱${loose>0?` +${loose}個`:''}`:`0 箱`;
         return `<div class="brand-row"><span class="rname">${item}</span><div class="stock-val ${isEmpty?'zero':''}">${display}</div></div>`;
       }).join('');
       const footer=brVal>0?`<div class="brand-value-footer"><span class="brand-value-label">💰 百貨 ${br.label}</span><span class="brand-value-amount">¥${brVal.toLocaleString()}</span></div>`:'';
       card.innerHTML=`<div class="brand-header ${br.cls}">${br.label}</div>${rows}${footer}`;
       grid.appendChild(card);
     });
-    document.getElementById('deptSummary').innerHTML=`
-      <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">百貨 品目数（配分）</div><div class="stat-v" style="color:#0C447C">${totalItems}</div></div>
+    document.getElementById(summaryId).innerHTML=`
+      <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">百貨 品目数（調貨のみ）</div><div class="stat-v" style="color:#0C447C">${totalItems}</div></div>
       <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">百貨 総箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
       <div class="stat" style="background:#FFF8E1;border-color:#FFD54F"><div class="stat-l" style="color:#E65100">百貨 金額</div><div class="stat-v" style="color:#BF360C;font-size:16px;">${totalValue>0?'¥'+totalValue.toLocaleString():'—'}</div></div>
       <div class="stat"><div class="stat-l">計算日</div><div class="stat-v" style="font-size:15px;">${d}</div></div>`;
@@ -3741,54 +3808,13 @@ window.toggleECMainUnit=function(){
 window.renderDeptDashMain=async function(){
   const d=document.getElementById('deptMainDateInput').value;
   if(!d) return;
-  // deptDateInput を一時的に同期
-  const origEl=document.getElementById('deptDateInput');
-  const origVal=origEl?origEl.value:'';
-  if(origEl) origEl.value=d;
-  // deptGrid を deptMainGrid に置き換えて render
-  const origGrid=document.getElementById('deptGrid');
-  const origSummary=document.getElementById('deptSummary');
-  const origToggle=document.getElementById('deptToggleUnitBtn');
-  if(origGrid) origGrid.id='deptGrid_bak';
-  if(origSummary) origSummary.id='deptSummary_bak';
-  document.getElementById('deptMainGrid').id='deptGrid';
-  document.getElementById('deptMainSummary').id='deptSummary';
-  if(origToggle) origToggle.id='deptToggleUnitBtn_bak';
-  document.getElementById('deptMainToggleBtn').id='deptToggleUnitBtn';
-  await renderDeptDash();
-  // 元に戻す
-  document.getElementById('deptGrid').id='deptMainGrid';
-  document.getElementById('deptSummary').id='deptMainSummary';
-  document.getElementById('deptToggleUnitBtn').id='deptMainToggleBtn';
-  if(origGrid) origGrid.id='deptGrid';
-  if(origSummary) origSummary.id='deptSummary';
-  if(origToggle) origToggle.id='deptToggleUnitBtn';
-  if(origEl) origEl.value=origVal;
+  await renderDeptDashInto(d,'deptMainGrid','deptMainSummary','dept');
 };
 
 window.renderECDashMain=async function(){
   const d=document.getElementById('ecMainDateInput').value;
   if(!d) return;
-  const origEl=document.getElementById('ecDateInput');
-  const origVal=origEl?origEl.value:'';
-  if(origEl) origEl.value=d;
-  const origGrid=document.getElementById('ecGrid');
-  const origSummary=document.getElementById('ecSummary');
-  const origToggle=document.getElementById('ecToggleUnitBtn');
-  if(origGrid) origGrid.id='ecGrid_bak';
-  if(origSummary) origSummary.id='ecSummary_bak';
-  document.getElementById('ecMainGrid').id='ecGrid';
-  document.getElementById('ecMainSummary').id='ecSummary';
-  if(origToggle) origToggle.id='ecToggleUnitBtn_bak';
-  document.getElementById('ecMainToggleBtn').id='ecToggleUnitBtn';
-  await renderECDash();
-  document.getElementById('ecGrid').id='ecMainGrid';
-  document.getElementById('ecSummary').id='ecMainSummary';
-  document.getElementById('ecToggleUnitBtn').id='ecMainToggleBtn';
-  if(origGrid) origGrid.id='ecGrid';
-  if(origSummary) origSummary.id='ecSummary';
-  if(origToggle) origToggle.id='ecToggleUnitBtn';
-  if(origEl) origEl.value=origVal;
+  await renderECDashInto(d,'ecMainGrid','ecMainSummary','ec');
 };
 
 // 百貨棚卸（deptCount）
@@ -3851,7 +3877,7 @@ function renderDeptCountGrid(){
         </div>
         <div style="padding:0 14px 8px;display:flex;align-items:center;gap:6px;">
           <span style="font-size:12px;color:var(--text-secondary);">＋バラ</span>
-          <input type="number" class="note-input" placeholder="個数" min="0" inputmode="numeric" value="${loose}" oninput="deptCountSet('${item+'_loose'}',this.value)"
+          <input type="number" class="note-input" placeholder="個数" min="0" inputmode="numeric" value="${loose}" oninput="deptCountSetRaw('${item}_loose',this.value)" onblur="deptCountSet('${item}_loose',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}"
             style="width:80px;font-size:12px;padding:4px 8px;border:1px dashed #CBD5E1;border-radius:6px;outline:none;background:#FAFAFA;text-align:right;">
           <span style="font-size:12px;color:var(--text-secondary);">個</span>
         </div>
@@ -3860,8 +3886,25 @@ function renderDeptCountGrid(){
   });
 }
 window.switchDeptCountBrand=function(id){ deptCountBrand=id; renderDeptCountGrid(); };
+window.deptCountSetRaw=function(key,v){ deptCountForm[key]=v; };
+window.ecCountSetRaw=function(key,v){ ecCountForm[key]=v; };
 window.deptCountStep=function(item,d){ deptCountForm[item]=Math.max(0,(Number(deptCountForm[item])||0)+d); renderDeptCountGrid(); };
-window.deptCountSet=function(key,v){ deptCountForm[key]=v; };
+window.deptCountSet=function(key,v){
+  // バラ個数の自動換算
+  if(key.endsWith('_loose')){
+    const item=key.replace('_loose','');
+    const loose=Number(v)||0;
+    const p=priceMap[item]||{};
+    const boxQty=p.qty||0;
+    if(boxQty>0 && loose>=boxQty){
+      deptCountForm[item]=(Number(deptCountForm[item])||0)+Math.floor(loose/boxQty);
+      deptCountForm[key]=loose%boxQty;
+      renderDeptCountGrid();
+      return;
+    }
+  }
+  deptCountForm[key]=v;
+};
 
 // EC棚卸（ecCount）
 let ecCountForm={}, ecCountBrand='DES';
@@ -3937,7 +3980,7 @@ function renderECCountGrid(){
         </div>
         <div style="padding:0 14px 8px;display:flex;align-items:center;gap:6px;">
           <span style="font-size:12px;color:var(--text-secondary);">＋バラ</span>
-          <input type="number" class="note-input" placeholder="個数" min="0" inputmode="numeric" value="${loose}" oninput="ecCountSet('${item+'_loose'}',this.value)"
+          <input type="number" class="note-input" placeholder="個数" min="0" inputmode="numeric" value="${loose}" oninput="ecCountSetRaw('${item}_loose',this.value)" onblur="ecCountSet('${item}_loose',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}"
             style="width:80px;font-size:12px;padding:4px 8px;border:1px dashed #CBD5E1;border-radius:6px;outline:none;background:#FAFAFA;text-align:right;">
           <span style="font-size:12px;color:var(--text-secondary);">個</span>
         </div>
@@ -3947,7 +3990,21 @@ function renderECCountGrid(){
 }
 window.switchECCountBrand=function(id){ ecCountBrand=id; renderECCountGrid(); };
 window.ecCountStep=function(key,d){ ecCountForm[key]=Math.max(0,(Number(ecCountForm[key])||0)+d); renderECCountGrid(); };
-window.ecCountSet=function(key,v){ ecCountForm[key]=v; };
+window.ecCountSet=function(key,v){
+  if(key.endsWith('_loose')){
+    const item=key.replace('_loose','');
+    const loose=Number(v)||0;
+    const p=priceMap[item]||{};
+    const boxQty=p.ecQty||p.qty||0;
+    if(boxQty>0 && loose>=boxQty){
+      ecCountForm[item]=(Number(ecCountForm[item])||0)+Math.floor(loose/boxQty);
+      ecCountForm[key]=loose%boxQty;
+      renderECCountGrid();
+      return;
+    }
+  }
+  ecCountForm[key]=v;
+};
 
 // 確保所有登入相關函数都掛載到 window
 window.doLogin=doLogin;
@@ -4074,5 +4131,3 @@ window.startGuestApp=startGuestApp;
       <div class="summary-row" id="guestVariantSummary"></div>
       <div id="guestVariantGrid" class="brand-grid"></div>
     </div>
-
-
