@@ -3486,19 +3486,17 @@ async function renderECDashInto(d, gridId, summaryId, unitKey){
       const p=priceMap[item]||{};
       const ecBoxQty2=p.ecQty||p.qty||1;
       const deptBoxQty2=p.qty||1;
-      // 棚卸日より後の調貨のみ（棚卸なしの場合は全調貨はdistMapに含まれるので不要）
-      if(useChannelStock){
-        Object.keys(transferCache).filter(date=>date>=ecStocktakeDate&&date<=d).sort().forEach(date=>{
-          (transferCache[date]||[]).forEach(t=>{
-            if(t.item!==item) return;
-            const units=t.units||(t.boxes||0)*ecBoxQty2;
-            if(t.from==='EC'){ boxes=Math.max(0,boxes-Math.floor(units/ecBoxQty2)); loose=Math.max(0,loose-units%ecBoxQty2); }
-            if(t.to==='EC'&&t.from!=='VT百貨'){ boxes+=Math.floor(units/ecBoxQty2); loose+=units%ecBoxQty2; }
-            if(t.from==='VT百貨'&&t.to==='EC'){ deptBoxes+=Math.floor(units/deptBoxQty2); }
-            if(t.from==='EC'&&t.to==='VT百貨'){ deptBoxes=Math.max(0,deptBoxes-Math.floor(units/deptBoxQty2)); }
-          });
+      // 棚卸あり：棚卸日以降の調貨、棚卸なし：全調貨を適用
+      Object.keys(transferCache).filter(date=>date>=ecStocktakeDate&&date<=d).sort().forEach(date=>{
+        (transferCache[date]||[]).forEach(t=>{
+          if(t.item!==item) return;
+          const units=t.units||(t.boxes||0)*ecBoxQty2;
+          if(t.from==='EC'){ boxes=Math.max(0,boxes-Math.floor(units/ecBoxQty2)); loose=Math.max(0,loose-units%ecBoxQty2); }
+          if(t.to==='EC'&&t.from!=='VT百貨'){ boxes+=Math.floor(units/ecBoxQty2); loose+=units%ecBoxQty2; }
+          if(t.from==='VT百貨'&&t.to==='EC'){ deptBoxes+=Math.floor(units/deptBoxQty2); }
+          if(t.from==='EC'&&t.to==='VT百貨'){ deptBoxes=Math.max(0,deptBoxes-Math.floor(units/deptBoxQty2)); }
         });
-      }
+      });
       const isEmpty=boxes===0&&loose===0&&deptBoxes===0;
       if(!isEmpty){ totalItems++; totalBoxes+=boxes+deptBoxes; }
       const ecBoxQty=p.ecQty||p.qty||0;
