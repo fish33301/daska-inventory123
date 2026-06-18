@@ -1407,7 +1407,7 @@ window.renderDashboard=async function(){
 
         // 棚卸日以降の調貨を適用
         const stDate=stocktakeDates[ch]||'0000-00-00';
-        Object.keys(transferCache).filter(date=>date>stDate&&date<=d).sort().forEach(date=>{
+        Object.keys(transferCache).filter(date=>date>=stDate&&date<=d).sort().forEach(date=>{
           (transferCache[date]||[]).forEach(t=>{
             if(t.item!==item) return;
             const boxQty=ch==='EC'?(p.ecQty||p.qty||1):(p.qty||1);
@@ -1839,7 +1839,7 @@ window.renderGuestDashboard=async function(){
         let chBoxes=hasStock?(chItem.boxes||0):0;
         let chDeptBoxes=hasStock&&ch==='EC'?(chItem.deptBoxes||0):0;
         const stDate=stocktakeDates[ch]||'0000-00-00';
-        Object.keys(transferCache).filter(date=>date>stDate&&date<=d).sort().forEach(date=>{
+        Object.keys(transferCache).filter(date=>date>=stDate&&date<=d).sort().forEach(date=>{
           (transferCache[date]||[]).forEach(t=>{
             if(t.item!==item) return;
             const boxQty=ch==='EC'?(p.ecQty||p.qty||1):(p.qty||1);
@@ -3049,7 +3049,7 @@ window.addTransferRow = function(){
       else currentBoxes=Number(val)||0;
     }
     // 棚卸後の調貨を適用
-    Object.keys(transferCache).filter(date=>date>stocktakeDate&&date<=d).sort().forEach(date=>{
+    Object.keys(transferCache).filter(date=>date>=stocktakeDate&&date<=d).sort().forEach(date=>{
       (transferCache[date]||[]).forEach(t=>{
         if(t.item!==item) return;
         const tUnits=t.units||(t.boxes||0)*fromBoxQty;
@@ -3488,7 +3488,7 @@ async function renderECDashInto(d, gridId, summaryId, unitKey){
       const deptBoxQty2=p.qty||1;
       // 棚卸日より後の調貨のみ（棚卸なしの場合は全調貨はdistMapに含まれるので不要）
       if(useChannelStock){
-        Object.keys(transferCache).filter(date=>date>ecStocktakeDate&&date<=d).sort().forEach(date=>{
+        Object.keys(transferCache).filter(date=>date>=ecStocktakeDate&&date<=d).sort().forEach(date=>{
           (transferCache[date]||[]).forEach(t=>{
             if(t.item!==item) return;
             const units=t.units||(t.boxes||0)*ecBoxQty2;
@@ -3551,7 +3551,7 @@ async function renderDeptDashInto(d, gridId, summaryId, unitKey){
         let boxes=chItem.boxes||0;
         let loose=chItem.loose||0;
         // 棚卸日より後の調貨のみ適用
-        Object.keys(transferCache).filter(date=>date>stocktakeDate&&date<=d).sort().forEach(date=>{
+        Object.keys(transferCache).filter(date=>date>=stocktakeDate&&date<=d).sort().forEach(date=>{
           (transferCache[date]||[]).forEach(t=>{
             if(t.item!==item) return;
             const p=priceMap[item]||{};
