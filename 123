@@ -1,0 +1,328 @@
+<!-- DASKA 庫存 v10.1 修正版 2026-06-18 -->
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DASKA 庫存</title>
+
+<!-- ══ PWA Meta ══ -->
+<meta name="application-name" content="DASKA 庫存">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DASKA 庫存">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0C447C">
+<link rel="manifest" id="pwaManifest">
+<link rel="apple-touch-icon" id="pwaIcon">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#185FA5;--blue-light:#E6F1FB;--blue-mid:#378ADD;--blue-dark:#0C447C;--blue-border:#85B7EB;
+  --green:#3B6D11;--green-light:#EAF3DE;--green-mid:#639922;--green-dark:#27500A;--green-border:#97C459;
+  --red:#A32D2D;--red-light:#FCEBEB;
+  --bg-main:#F8FAFC;--border-color:#E2E8F0;--text-primary:#1E293B;--text-secondary:#64748B;
+  --mode-bg:var(--blue-light);--mode-accent:var(--blue);--mode-dark:var(--blue-dark);
+  --mode-border:var(--blue-border);--mode-mid:var(--blue-mid);
+}
+body[data-mode="CP"]{
+  --mode-bg:var(--green-light);--mode-accent:var(--green);--mode-dark:var(--green-dark);
+  --mode-border:var(--green-border);--mode-mid:var(--green-mid);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",YuGothic,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background-color:var(--bg-main);color:var(--text-primary);padding:16px;}
+
+.tab-label-short{display:none;}
+@media(max-width:600px){
+  .tab-label-full{display:none;}
+  .tab-label-short{display:inline;}
+  body{padding:8px;}
+  .app{padding:12px;border-radius:8px;}
+  .top-bar h1{font-size:15px;}
+  .tab-bar{width:100%;gap:4px;}
+  .tab{padding:8px 4px;font-size:12px;flex:1;text-align:center;}
+  .model-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
+  #analyticsChartRow { grid-template-columns: 1fr !important; }
+}
+
+/* ══ PWA 安裝提示 ══ */
+#installBanner{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;
+  background:var(--blue-dark);color:#fff;padding:14px 20px;flex-direction:column;gap:10px;
+  box-shadow:0 -4px 20px rgba(0,0,0,0.2);
+}
+#installBanner.show{display:flex;}
+.install-row{display:flex;align-items:center;gap:12px;}
+.install-actions{display:flex;gap:8px;}
+.install-btn{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;}
+.install-btn.primary{background:#fff;color:var(--blue-dark);}
+.install-btn.dismiss{background:rgba(255,255,255,0.15);color:#fff;}
+
+/* iOS 提示 */
+#iosHint{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;
+  background:var(--blue-dark);color:#fff;padding:16px 20px 24px;flex-direction:column;gap:8px;
+  border-radius:16px 16px 0 0;
+}
+#iosHint.show{display:flex;}
+
+/* ══ UI 元素 ══ */
+.app{max-width:1400px;margin:0 auto;background:#fff;padding:24px;border-radius:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);}
+.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border-color);}
+.top-bar h1{font-size:18px;font-weight:600;flex:1;color:var(--text-primary);display:flex;align-items:center;gap:8px;}
+.tab-bar{display:flex;gap:8px;margin-bottom:20px;background:#F1F5F9;padding:4px;border-radius:8px;width:fit-content;}
+.tab{padding:6px 20px;font-size:14px;font-weight:500;border-radius:6px;border:none;background:transparent;cursor:pointer;color:var(--text-secondary);transition:all 0.2s;}
+.tab.active{background:#fff;color:var(--blue);box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+.view{display:none;}.view.active{display:block;}
+
+.sync-badge{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;}
+.sync-dot{width:7px;height:7px;border-radius:50%;}
+.sync-badge.online{background:#EAF3DE;color:#27500A;}
+.sync-badge.online .sync-dot{background:#3B6D11;}
+.sync-badge.offline{background:#FCEBEB;color:#791F1F;}
+.sync-badge.offline .sync-dot{background:#A32D2D;}
+
+.logout-btn{font-size:12px;font-weight:500;padding:5px 12px;border:1px solid var(--border-color);border-radius:6px;background:#fff;cursor:pointer;}
+.btn{font-size:13px;font-weight:500;padding:6px 14px;border:1px solid var(--border-color);border-radius:6px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:4px;}
+.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn.danger{color:var(--red);border-color:#FCA5A5;background:#FFF5F5;}
+
+.summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;}
+.stat{background:var(--mode-bg);border:1px solid var(--mode-border);border-radius:8px;padding:12px 16px;}
+.stat-l{font-size:12px;color:var(--mode-accent);margin-bottom:4px;font-weight:500;}
+.stat-v{font-size:20px;font-weight:600;color:var(--mode-dark);}
+
+.toolbar-layout{display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap;}
+.mode-tab{padding:6px 18px;font-size:13px;font-weight:600;border-radius:6px;border:1.5px solid var(--border-color);background:#fff;cursor:pointer;color:var(--text-secondary);}
+.mode-tab.active.in-mode{background:var(--blue-light);color:var(--blue-dark);border-color:var(--blue-border);}
+.mode-tab.active.cp-mode{background:var(--green-light);color:var(--green-dark);border-color:var(--green-border);}
+
+.sub-tab-bar{display:flex;gap:8px;margin-bottom:18px;overflow-x:auto;padding-bottom:4px;}
+.sub-tab{padding:8px 18px;font-size:14px;font-weight:600;border-radius:8px;border:1px solid var(--border-color);background:#fff;cursor:pointer;white-space:nowrap;}
+.sub-tab.active{background:var(--mode-accent);color:#fff;}
+
+.model-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;}
+.model-card{background:#fff;border:1px solid var(--border-color);border-radius:8px;overflow:hidden;transition:all 0.2s;}
+.card-head{padding:10px 14px;background:var(--mode-bg);display:flex;justify-content:space-between;align-items:center;font-weight:600;}
+
+.brand-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+.brand-card{background:#fff;border:1px solid var(--border-color);border-radius:8px;overflow:hidden;}
+.brand-header{padding:8px 14px;font-size:13px;font-weight:700;border-bottom:1px solid var(--border-color);}
+.brand-header.des{background:#FCEBEB;color:#791F1F;}
+.brand-header.lf{background:#FAEEDA;color:#633806;}
+.brand-header.le{background:#EAF3DE;color:#27500A;}
+.brand-header.yt{background:#E6F1FB;color:#0C447C;}
+
+.login-card{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.1);padding:40px;width:100%;max-width:380px;text-align:center;}
+.login-input{width:100%;padding:12px;margin:10px 0;border:1.5px solid var(--border-color);border-radius:8px;}
+.login-btn{width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;}
+
+.toast{background:#1E293B;color:#fff;padding:6px 18px;border-radius:999px;font-size:12px;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+.toast.show{opacity:1;}
+
+canvas { max-width: 100%; height: auto !important; }
+</style>
+</head>
+<body data-mode="IN">
+
+<!-- Android 安裝提示 -->
+<div id="installBanner">
+  <div class="install-row">
+    <div class="install-text"><strong>📦 DASKA 庫存</strong><br>加到主畫面，使用更方便</div>
+  </div>
+  <div class="install-actions">
+    <button class="install-btn primary" onclick="triggerInstall()">➕ 安裝</button>
+    <button class="install-btn dismiss" onclick="dismissInstall()">稍後</button>
+  </div>
+</div>
+
+<!-- iOS 手動加入提示 -->
+<div id="iosHint">
+  <div>📱 <strong>加到主畫面</strong></div>
+  <div style="font-size:13px;">點擊工具列的「分享」⬆️，然後選擇「加入主畫面」</div>
+  <button onclick="document.getElementById('iosHint').classList.remove('show')" style="margin-top:8px;">關閉</button>
+</div>
+
+<!-- 登入頁 -->
+<div id="loginScreen" style="display:flex; min-height:100vh; align-items:center; justify-content:center;">
+  <div class="login-card">
+    <h2>📦 DASKA 庫存</h2>
+    <p style="color:var(--text-secondary); margin-bottom:20px;">請輸入密碼以繼續</p>
+    <input type="password" id="pwInput" class="login-input" placeholder="密碼" onkeydown="if(event.key==='Enter')doLogin()">
+    <div id="loginError" style="color:var(--red); font-size:13px; display:none; margin-bottom:10px;">密碼錯誤</div>
+    <button class="login-btn" onclick="doLogin()">🔑 管理者登入</button>
+    <div style="margin:15px 0; color:#ccc;">或</div>
+    <button class="login-btn" style="background:#F1F5F9; color:var(--text-primary);" onclick="doGuestLogin()">👁 訪客模式 (唯讀)</button>
+  </div>
+</div>
+
+<!-- 主系統 -->
+<div id="mainApp" style="display:none;">
+  <div class="app">
+    <div class="top-bar">
+      <h1>📦 DASKA 庫存</h1>
+      <div class="sync-badge offline" id="syncBadge"><div class="sync-dot"></div><span id="syncBadgeText">連線中...</span></div>
+      <button class="logout-btn" onclick="doLogout()">🔒 登出</button>
+      <span id="mainToast" class="toast"></span>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab active" data-tab="edit" onclick="switchTab('edit')">📝 <span class="tab-label-full">入庫/棚卸</span><span class="tab-label-short">入庫</span></button>
+      <button class="tab" data-tab="dash" onclick="switchTab('dash')">📊 <span class="tab-label-full">總量在庫</span><span class="tab-label-short">總量</span></button>
+      <button class="tab" data-tab="dept" onclick="switchTab('dept')">🏬 <span class="tab-label-full">百貨</span><span class="tab-label-short">百貨</span></button>
+      <button class="tab" data-tab="ec" onclick="switchTab('ec')">🛒 <span class="tab-label-full">EC</span><span class="tab-label-short">EC</span></button>
+      <button class="tab" data-tab="dist" onclick="switchTab('dist')">🚚 <span class="tab-label-full">配分</span><span class="tab-label-short">配分</span></button>
+      <button class="tab" data-tab="variant" onclick="switchTab('variant')">🔍 <span class="tab-label-full">改版明細</span><span class="tab-label-short">改版</span></button>
+      <button class="tab" data-tab="analytics" onclick="switchTab('analytics')">📈 <span class="tab-label-full">分析</span><span class="tab-label-short">分析</span></button>
+      <button class="tab" data-tab="price" onclick="switchTab('price')">💰 <span class="tab-label-full">單價設定</span><span class="tab-label-short">單價</span></button>
+    </div>
+
+    <!-- 各分頁內容 -->
+    <div class="view active" id="view-edit">
+        <div class="tab-bar" style="margin-bottom:16px;">
+            <button class="tab active" id="editSubTab1" onclick="switchEditSubTab('entry')">📝 入庫/棚卸</button>
+            <button class="tab" id="editSubTab2" onclick="switchEditSubTab('history')">📅 記錄</button>
+        </div>
+        <div id="edit-entry">
+            <div class="toolbar-layout">
+                <div class="mode-switch-container">
+                    <button id="btnModeIn" class="mode-tab active in-mode" onclick="switchMode('IN')">📥 每日入庫 (+)</button>
+                    <button id="btnModeCp" class="mode-tab" onclick="switchMode('CP')">📋 實地棚卸 (=)</button>
+                </div>
+                <input type="date" id="editDateInput" onchange="loadDateData(this.value)">
+                <button class="btn primary" onclick="saveAllEntry()">💾 全部保存</button>
+            </div>
+            <div id="editSummary" class="summary-row"></div>
+            <div id="editBrandTabs" class="sub-tab-bar"></div>
+            <div id="editGrid" class="model-grid"></div>
+        </div>
+        <div id="edit-history" style="display:none;">
+            <div id="historyTable"></div>
+        </div>
+    </div>
+
+    <div class="view" id="view-dash">
+        <div class="toolbar-layout">
+            <input type="date" id="dashDateInput" onchange="renderDashboard()">
+            <button class="btn" id="toggleUnitBtn" onclick="toggleDashUnit()">🔢 個數顯示</button>
+            <button class="btn primary" onclick="exportXLSX()">⬇ 匯出 Excel</button>
+        </div>
+        <div id="dashBrandTabs" class="sub-tab-bar"></div>
+        <div id="dashSummary" class="summary-row"></div>
+        <div id="dashGrid" class="brand-grid"></div>
+        <div id="dashValueBar" style="margin-top:20px;"></div>
+    </div>
+
+    <div class="view" id="view-dept">
+        <div class="toolbar-layout">
+            <input type="date" id="deptMainDateInput" onchange="renderDeptDashMain()">
+        </div>
+        <div id="deptMainSummary" class="summary-row"></div>
+        <div id="deptMainGrid" class="brand-grid"></div>
+    </div>
+
+    <div class="view" id="view-ec">
+        <div class="toolbar-layout">
+            <input type="date" id="ecMainDateInput" onchange="renderECDashMain()">
+        </div>
+        <div id="ecMainSummary" class="summary-row"></div>
+        <div id="ecMainGrid" class="brand-grid"></div>
+    </div>
+
+    <div class="view" id="view-dist">
+        <div class="toolbar-layout">
+            <input type="date" id="distDateInput" onchange="loadDistData(this.value)">
+            <button class="btn primary" onclick="saveDistEntry()">💾 配分保存</button>
+        </div>
+        <div id="distSummary" class="summary-row"></div>
+        <div id="distBrandTabs" class="sub-tab-bar"></div>
+        <div id="distGrid" class="model-grid"></div>
+    </div>
+
+    <div class="view" id="view-variant">
+        <div class="toolbar-layout">
+            <input type="date" id="variantDateInput" onchange="renderVariantView()">
+        </div>
+        <div id="variantSummary" class="summary-row"></div>
+        <div id="variantGrid" class="brand-grid"></div>
+    </div>
+
+    <!-- 📊 分析分頁 (Analytics) -->
+    <div class="view" id="view-analytics">
+      <div class="toolbar-layout" style="margin-bottom:16px;">
+        <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
+        <input type="date" id="analyticsDateInput" onchange="renderAnalytics()">
+        <button class="btn primary" onclick="renderAnalytics()">📊 更新</button>
+      </div>
+      <div id="analyticsSummary" class="summary-row" style="margin-bottom:20px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;" id="analyticsChartRow">
+        <!-- 通路占比 -->
+        <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 通路別在庫占比</div>
+          <canvas id="channelPieChart" width="300" height="300"></canvas>
+          <div id="channelLegend" style="margin-top:12px;"></div>
+        </div>
+        <!-- 品牌占比 -->
+        <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 ブランド別在庫占比</div>
+          <canvas id="brandPieChart" width="300" height="300"></canvas>
+          <div id="brandLegend" style="margin-top:12px;"></div>
+        </div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;margin-bottom:16px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">💰 通路別金額</div>
+        <div id="channelValueBars"></div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">💰 ブランド別金額</div>
+        <div id="brandValueBars"></div>
+      </div>
+    </div>
+
+    <div class="view" id="view-price">
+      <div class="toolbar-layout">
+        <button class="btn primary" onclick="savePriceSettings()">💾 保存設定</button>
+      </div>
+      <div id="priceBrandTabs" class="sub-tab-bar"></div>
+      <div id="priceGrid"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 👁 訪客系統 -->
+<div id="guestApp" style="display:none;">
+  <div class="app">
+    <div class="top-bar">
+      <h1>📦 DASKA 庫存 (訪客)</h1>
+      <button class="logout-btn" onclick="doLogout()">登出</button>
+    </div>
+    <div class="tab-bar">
+        <button class="tab active" id="guestTab1" onclick="switchGuestTab('current')">📊 總量</button>
+        <button class="tab" id="guestTab2" onclick="switchGuestTab('dept')">🏬 百貨</button>
+        <button class="tab" id="guestTab3" onclick="switchGuestTab('ec')">🛒 EC</button>
+        <button class="tab" id="guestTab6" onclick="switchGuestTab('variant')">🔍 改版明細</button>
+    </div>
+    <div id="guest-current" class="guest-view">
+        <div class="toolbar-layout"><input type="date" id="guestDateInput" onchange="renderGuestDashboard()"></div>
+        <div id="guestSummary" class="summary-row"></div>
+        <div id="guestGrid" class="brand-grid"></div>
+        <div id="guestValueBar"></div>
+    </div>
+    <!-- 其他訪客視圖... -->
+  </div>
+</div>
+
+<!-- 同步 Overlay -->
+<div id="syncOverlay" style="display:none; position:fixed; top:20px; right:20px; background:#333; color:#fff; padding:10px 20px; border-radius:8px; z-index:10000;">
+    同期中...
+</div>
+
+<!-- Firebase 及 邏輯代碼 (請插入您原本的 Script 內容) -->
+<script type="module">
+// ... 此處貼上原本檔案中 <script type="module"> 到 </script> 之間的內容 ...
+// 注意：請確保 switchTab('analytics') 呼叫了 renderAnalytics()
+</script>
+
+</body>
+</html>
