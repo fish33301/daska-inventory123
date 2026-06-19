@@ -370,16 +370,16 @@ input[type="date"]:focus,input[type="text"]:focus{border-color:#378ADD;box-shado
       <span id="mainToast" class="toast"></span>
     </div>
     <div class="tab-bar" style="flex-wrap:wrap;">
-      <button class="tab active" data-tab="edit" onclick="switchTab('edit')">📝 <span class="tab-label-full">入庫/棚卸</span><span class="tab-label-short">入庫</span></button>
+      <button class="tab active" data-tab="analytics" onclick="switchTab('analytics')">📈 <span class="tab-label-full">分析</span><span class="tab-label-short">分析</span></button>
       <button class="tab" data-tab="dept" onclick="switchTab('dept')">🏬 <span class="tab-label-full">百貨</span><span class="tab-label-short">百貨</span></button>
       <button class="tab" data-tab="ec" onclick="switchTab('ec')">🛒 <span class="tab-label-full">EC</span><span class="tab-label-short">EC</span></button>
       <button class="tab" data-tab="dash" onclick="switchTab('dash')">📊 <span class="tab-label-full">総量在庫</span><span class="tab-label-short">総量</span></button>
+      <button class="tab" data-tab="edit" onclick="switchTab('edit')">📝 <span class="tab-label-full">入庫/棚卸</span><span class="tab-label-short">入庫</span></button>
       <button class="tab" data-tab="dist" onclick="switchTab('dist')">🚚 <span class="tab-label-full">通路配分</span><span class="tab-label-short">配分</span></button>
       <button class="tab" data-tab="variant" onclick="switchTab('variant')">🔍 <span class="tab-label-full">改版明細</span><span class="tab-label-short">改版</span></button>
-      <button class="tab" data-tab="analytics" onclick="switchTab('analytics')">📈 <span class="tab-label-full">分析</span><span class="tab-label-short">分析</span></button>
       <button class="tab" data-tab="price" onclick="switchTab('price')">💰 <span class="tab-label-full">単価設定</span><span class="tab-label-short">単価</span></button>
     </div>
-    <div class="view active" id="view-edit">
+    <div class="view" id="view-edit">
       <div class="tab-bar" style="margin-bottom:16px;">
         <button class="tab active" id="editSubTab1" onclick="switchEditSubTab('entry')">📝 入庫/棚卸</button>
         <button class="tab" id="editSubTab2" onclick="switchEditSubTab('history')">📅 記録</button>
@@ -1093,6 +1093,7 @@ async function startApp(){
   const today=new Date().toISOString().slice(0,10);
   document.getElementById('editDateInput').value=today;
   document.getElementById('dashDateInput').value=today;
+  document.getElementById('analyticsDateInput').value=today;
 
   // 載入各品牌カスタム品目
   onValue(ref(db,'customItems'),snap=>{
@@ -1148,6 +1149,7 @@ async function startApp(){
   await loadPriceSettings();
   priceReady = true;
   if(cacheReady.in && cacheReady.cp) tryRenderDashboard();
+  renderAnalytics();
   await loadDateData(today);
   applyLang();
 }
@@ -1755,6 +1757,7 @@ window.exportXLSX=async function(){
 async function startGuestApp(){
   const today=new Date().toISOString().slice(0,10);
   document.getElementById('guestDateInput').value=today;
+  document.getElementById('guestAnalyticsDateInput').value=today;
   onValue(ref(db,'.info/connected'),snap=>{
     const on=snap.val()===true;
     const badge=document.getElementById('guestSyncBadge');
@@ -1762,6 +1765,7 @@ async function startGuestApp(){
     document.getElementById('guestSyncBadgeText').textContent=on?'リアルタイム同期中':'オフライン';
   });
   await loadPriceSettings();
+  renderGuestAnalytics();
   // 監聽資料更新時自動刷新訪客畫面
   let guestInDebounce = null, guestCpDebounce = null;
   onValue(ref(db,'inHistory'),snap=>{
@@ -1972,7 +1976,7 @@ window.toggleGuestChannelUnit=function(ch){
 };
 
 window.switchGuestTab=function(tab){
-  const tabs=['current','dept','ec','web','kaitori','variant','analytics'];
+  const tabs=['analytics','dept','ec','current','web','kaitori','variant'];
   tabs.forEach((t,i)=>{
     const btn=document.getElementById('guestTab'+(i+1));
     if(btn) btn.classList.toggle('active',t===tab);
@@ -4263,7 +4267,7 @@ window.startGuestApp=startGuestApp;
 </body>
 </html>
     <!-- ══ 分析 ══ -->
-    <div class="view" id="view-analytics">
+    <div class="view active" id="view-analytics">
       <div class="toolbar-layout" style="margin-bottom:16px;">
         <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
         <input type="date" id="analyticsDateInput" onchange="renderAnalytics()">
@@ -4311,16 +4315,16 @@ window.startGuestApp=startGuestApp;
     </div>
     <div class="guest-notice">📋 ゲストモードです。リアルタイム在庫の閲覧のみ可能です</div>
     <div class="tab-bar" style="flex-wrap:wrap;">
-      <button class="tab active" id="guestTab1" onclick="switchGuestTab('current')">📊 総量</button>
+      <button class="tab active" id="guestTab1" onclick="switchGuestTab('analytics')">📈 分析</button>
       <button class="tab" id="guestTab2" onclick="switchGuestTab('dept')">🏬 百貨</button>
       <button class="tab" id="guestTab3" onclick="switchGuestTab('ec')">🛒 EC</button>
-      <button class="tab" id="guestTab4" onclick="switchGuestTab('web')">🌐 WEB</button>
-      <button class="tab" id="guestTab5" onclick="switchGuestTab('kaitori')">🛍 買取</button>
-      <button class="tab" id="guestTab6" onclick="switchGuestTab('variant')">🔍 改版明細</button>
-      <button class="tab" id="guestTab7" onclick="switchGuestTab('analytics')">📈 分析</button>
+      <button class="tab" id="guestTab4" onclick="switchGuestTab('current')">📊 総量</button>
+      <button class="tab" id="guestTab5" onclick="switchGuestTab('web')">🌐 WEB</button>
+      <button class="tab" id="guestTab6" onclick="switchGuestTab('kaitori')">🛍 買取</button>
+      <button class="tab" id="guestTab7" onclick="switchGuestTab('variant')">🔍 改版明細</button>
     </div>
     <!-- リアルタイム在庫 -->
-    <div id="guest-current">
+    <div id="guest-current" style="display:none;">
       <div class="toolbar-layout">
         <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
         <input type="date" id="guestDateInput" onchange="renderGuestDashboard()">
@@ -4380,7 +4384,7 @@ window.startGuestApp=startGuestApp;
       <div id="guestVariantGrid" class="brand-grid"></div>
     </div>
     <!-- 分析 -->
-    <div id="guest-analytics" style="display:none;">
+    <div id="guest-analytics">
       <div class="toolbar-layout" style="margin-bottom:16px;">
         <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
         <input type="date" id="guestAnalyticsDateInput" onchange="renderGuestAnalytics()">
