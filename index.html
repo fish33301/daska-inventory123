@@ -3235,17 +3235,18 @@ window.renderAnalytics=async function(){
         });
       });
     }
-    const deptTotalBoxes=deptOwnBoxes+ecDeptBoxes;
+    const deptTotalBoxes=deptOwnBoxes;
     const deptVal=deptTotalBoxes*deptBoxQty*price;
     channelData['VT百貨'].boxes+=deptTotalBoxes; channelData['VT百貨'].value+=deptVal;
     brandData[br.label].boxes+=deptTotalBoxes; brandData[br.label].value+=deptVal;
     brandData[br.label].ch['VT百貨'].boxes+=deptTotalBoxes; brandData[br.label].ch['VT百貨'].value+=deptVal;
 
-    // EC通路（百貨分を除いた純粋なEC在庫のみ）
-    const ecVal=ecOwnBoxes*ecBoxQty*price+ecLoose*price;
-    channelData['EC'].boxes+=ecOwnBoxes; channelData['EC'].value+=ecVal;
-    brandData[br.label].boxes+=ecOwnBoxes; brandData[br.label].value+=ecVal;
-    brandData[br.label].ch['EC'].boxes+=ecOwnBoxes; brandData[br.label].ch['EC'].value+=ecVal;
+    // EC通路（自社EC在庫＋EC倉に紐づく百貨分の箱も含む）
+    const ecTotalBoxes=ecOwnBoxes+ecDeptBoxes;
+    const ecVal=ecOwnBoxes*ecBoxQty*price+ecLoose*price+ecDeptBoxes*deptBoxQty*price;
+    channelData['EC'].boxes+=ecTotalBoxes; channelData['EC'].value+=ecVal;
+    brandData[br.label].boxes+=ecTotalBoxes; brandData[br.label].value+=ecVal;
+    brandData[br.label].ch['EC'].boxes+=ecTotalBoxes; brandData[br.label].ch['EC'].value+=ecVal;
 
     // WEB・買取（変更なし）
     ['WEB','買取'].forEach(ch=>{
@@ -3420,17 +3421,18 @@ window.renderGuestAnalytics=async function(){
         });
       });
     }
-    const deptTotalBoxes=deptOwnBoxes+ecDeptBoxes;
+    const deptTotalBoxes=deptOwnBoxes;
     const deptVal=deptTotalBoxes*deptBoxQty*price;
     channelData['VT百貨'].boxes+=deptTotalBoxes; channelData['VT百貨'].value+=deptVal;
     brandData[br.label].boxes+=deptTotalBoxes; brandData[br.label].value+=deptVal;
     brandData[br.label].ch['VT百貨'].boxes+=deptTotalBoxes; brandData[br.label].ch['VT百貨'].value+=deptVal;
 
-    // EC通路（百貨分を除いた純粋なEC在庫のみ）
-    const ecVal=ecOwnBoxes*ecBoxQty*price+ecLoose*price;
-    channelData['EC'].boxes+=ecOwnBoxes; channelData['EC'].value+=ecVal;
-    brandData[br.label].boxes+=ecOwnBoxes; brandData[br.label].value+=ecVal;
-    brandData[br.label].ch['EC'].boxes+=ecOwnBoxes; brandData[br.label].ch['EC'].value+=ecVal;
+    // EC通路（自社EC在庫＋EC倉に紐づく百貨分の箱も含む）
+    const ecTotalBoxes=ecOwnBoxes+ecDeptBoxes;
+    const ecVal=ecOwnBoxes*ecBoxQty*price+ecLoose*price+ecDeptBoxes*deptBoxQty*price;
+    channelData['EC'].boxes+=ecTotalBoxes; channelData['EC'].value+=ecVal;
+    brandData[br.label].boxes+=ecTotalBoxes; brandData[br.label].value+=ecVal;
+    brandData[br.label].ch['EC'].boxes+=ecTotalBoxes; brandData[br.label].ch['EC'].value+=ecVal;
 
     // WEB・買取（変更なし）
     ['WEB','買取'].forEach(ch=>{
