@@ -49,7 +49,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku
   .sync-badge{font-size:11px;padding:3px 8px;}
   .logout-btn{font-size:11px;padding:4px 8px;}
   .tab-bar{width:100%;gap:4px;}
-  .tab{padding:8px 4px;font-size:12px;flex:1;text-align:center;}
+  .tab{padding:8px 10px;font-size:12px;flex:initial;white-space:nowrap;text-align:center;}
   .toolbar-layout{gap:8px;}
   .btn{font-size:12px;padding:6px 10px;}
   .mode-switch-container{width:100%;}
@@ -541,6 +541,7 @@ input[type="date"]:focus,input[type="text"]:focus{border-color:#378ADD;box-shado
           <button class="btn" onclick="closeDeptVariantDetail()">← 百貨在庫に戻る</button>
           <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
           <input type="date" id="deptVariantDateInput" disabled style="background:#F1F5F9;">
+          <button class="btn primary" onclick="exportDeptVariantXLSX()">⬇ 改版明細 Excel エクスポート</button>
         </div>
         <div class="summary-row" id="deptVariantSummary"></div>
         <div id="deptVariantGrid" class="brand-grid"></div>
@@ -1924,6 +1925,102 @@ window.exportDeptXLSX=async function(){
 
   XLSX.utils.book_append_sheet(wb, ws, '百貨在庫總覽');
   XLSX.writeFile(wb, `DASKA_百貨在庫_${d}.xlsx`, {cellStyles:true});
+  hideSyncOverlay();
+  window.toast('Excel エクスポート完了！');
+};
+
+window.exportDeptVariantXLSX=async function(dateInputId){
+  dateInputId=dateInputId||'deptVariantDateInput';
+  const d=document.getElementById(dateInputId).value;
+  if(!d){ alert('先に日付を選択してください'); return; }
+  showSyncOverlay('Excel 出力中...');
+
+  // ── 百貨棚卸データ（改版型号別）を取得 ──
+  const chStock=await getChannelStock('VT百貨',d);
+  const fullStockMap={};
+  Object.entries(chStock).forEach(([key,val])=>{ fullStockMap[key]=val.boxes||0; });
+  const SUFFIXES_LIST=['','N','N2','N3','N4','N5','N6'];
+
+  // ── 動態載入 SheetJS ──
+  if(!window.XLSX){
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload=res; s.onerror=rej;
+      document.head.appendChild(s);
+    });
+  }
+  const XLSX=window.XLSX;
+  const wb=XLSX.utils.book_new();
+
+  const border = {
+    top:    {style:'thin', color:{rgb:'AAAAAA'}},
+    bottom: {style:'thin', color:{rgb:'AAAAAA'}},
+    left:   {style:'thin', color:{rgb:'AAAAAA'}},
+    right:  {style:'thin', color:{rgb:'AAAAAA'}},
+  };
+  const headerFills = {
+    'DES':  'F5D0D0', 'LF': 'FAE5C0', 'LE': 'D0EDD8', 'YT': 'D0DCF5', '限定': 'E8D0F5', 'チーズ': 'FFF8E1'
+  };
+
+  let grandTotalAll=0;
+
+  CP_BRANDS_CONFIG.forEach(br=>{
+    const rows=[];
+    rows.push([`${br.label}　改版明細　計算日：${d}`]);
+    rows.push([]);
+    rows.push(['品目','型号','箱数','合計（品目）']);
+
+    let brTotal=0;
+    br.items.forEach(base=>{
+      const variants=SUFFIXES_LIST.filter(s=>{
+        const k=base+(s||'');
+        return fullStockMap.hasOwnProperty(k)||(fullStockMap[k]||0)>0;
+      });
+      if(variants.length===0){
+        rows.push([base,'オリジナル',0,0]);
+        return;
+      }
+      const baseTotal=variants.reduce((s,sf)=>s+(fullStockMap[base+(sf||'')]||0),0);
+      brTotal+=baseTotal;
+      if(variants.length===1 && variants[0]===''){
+        const qty=fullStockMap[base]||0;
+        rows.push([base,'オリジナル',qty,qty]);
+      } else {
+        variants.forEach((sf,vi)=>{
+          const k=base+(sf||'');
+          const qty=fullStockMap[k]||0;
+          const label=sf===''?'オリジナル':sf;
+          rows.push([vi===0?base:'', label, qty, vi===0?baseTotal:'']);
+        });
+      }
+    });
+
+    rows.push(['ブランド合計','','',brTotal]);
+    grandTotalAll+=brTotal;
+
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:16},{wch:12},{wch:9},{wch:12}];
+
+    const totalRowIdx=rows.length-1;
+    for(let r=2;r<rows.length;r++){
+      for(let c=0;c<4;c++){
+        const addr=XLSX.utils.encode_cell({r,c});
+        if(!ws[addr]) ws[addr]={v:'',t:'s'};
+        const isHeader=r===2;
+        const isTotal=r===totalRowIdx;
+        ws[addr].s={
+          border,
+          fill:{patternType:'solid',fgColor:{rgb:isHeader?(headerFills[br.label]||'E2E8F0'):isTotal?'F1F5F9':'FFFFFF'}},
+          font:{bold:isHeader||isTotal},
+          alignment:{horizontal:c===0||c===1?'left':'right',vertical:'center'},
+        };
+      }
+    }
+    XLSX.utils.book_append_sheet(wb, ws, br.label);
+  });
+
+  XLSX.writeFile(wb, `DASKA_百貨改版明細_${d}.xlsx`, {cellStyles:true});
   hideSyncOverlay();
   window.toast('Excel エクスポート完了！');
 };
@@ -3380,9 +3477,8 @@ const I18N = {
   ja: {
     logout: '🔒 ログアウト', online: '接続中、リアルタイム同期', offline: 'オフライン',
     tab_edit: '📝 在庫変動 (入庫/棚卸)', tab_edit_short: '入庫/棚卸',
-    tab_dash: '🏭 リアルタイム在庫 (総覧)', tab_dash_short: 'リアルタイム在庫',
+    tab_dash: '🏭 リアルタイム在庫 (総覧)', tab_dash_short: '総量在庫',
     tab_dist: '🚚 チャネル配分', tab_dist_short: '配分',
-    tab_variant: '🔍 改版明細', tab_variant_short: '改版',
     tab_price: '💰 単価設定', tab_price_short: '単価',
     mode_in: '📥 毎日入庫 (+)', mode_cp: '📋 実地棚卸 (=)',
     save_all: '💾 すべて保存', clear_day: '🗑 当日をクリア',
@@ -3406,7 +3502,6 @@ const I18N = {
     tab_edit: '📝 庫存異動 (入庫/盤點)', tab_edit_short: '入庫/盤點',
     tab_dash: '🏭 即時在庫 (總覽)', tab_dash_short: '即時在庫',
     tab_dist: '🚚 通路分配', tab_dist_short: '分配',
-    tab_variant: '🔍 改版明細', tab_variant_short: '改版',
     tab_price: '💰 單價設定', tab_price_short: '單價',
     mode_in: '📥 每日入庫 (+)', mode_cp: '📋 實體盤點 (=)',
     save_all: '💾 全部儲存', clear_day: '🗑 清空當日',
@@ -3445,7 +3540,7 @@ function applyLang(){
   const lo = document.querySelector('#mainApp .logout-btn');
   if(lo) lo.textContent = t('logout');
   // tabs
-  const tabMap = {edit:['tab_edit','tab_edit_short'],dash:['tab_dash','tab_dash_short'],dist:['tab_dist','tab_dist_short'],variant:['tab_variant','tab_variant_short'],price:['tab_price','tab_price_short']};
+  const tabMap = {edit:['tab_edit','tab_edit_short'],dash:['tab_dash','tab_dash_short'],dist:['tab_dist','tab_dist_short'],price:['tab_price','tab_price_short']};
   document.querySelectorAll('#mainApp .tab-bar>[data-tab]').forEach(b=>{
     const k=tabMap[b.dataset.tab];
     if(k) b.innerHTML=`<span class="tab-label-full">${t(k[0])}</span><span class="tab-label-short">${t(k[1])}</span>`;
@@ -4365,6 +4460,7 @@ window.switchDeptMainTab=function(tab){
   document.getElementById('deptMainTab2').classList.toggle('active',tab==='count');
   document.getElementById('deptMainTab3').classList.toggle('active',tab==='history');
   document.getElementById('dept-stock').style.display=tab==='stock'?'':'none';
+  document.getElementById('dept-variant').style.display='none';
   document.getElementById('dept-count').style.display=tab==='count'?'':'none';
   document.getElementById('dept-history').style.display=tab==='history'?'':'none';
   if(tab==='stock') renderDeptDashMain();
@@ -4745,6 +4841,7 @@ window.startGuestApp=startGuestApp;
         <button class="btn" onclick="closeGuestDeptVariantDetail()">← 百貨在庫に戻る</button>
         <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
         <input type="date" id="guestVariantDateInput" disabled style="background:#F1F5F9;">
+        <button class="btn primary" onclick="exportDeptVariantXLSX('guestVariantDateInput')">⬇ 改版明細 Excel エクスポート</button>
       </div>
       <div class="summary-row" id="guestVariantSummary"></div>
       <div id="guestVariantGrid" class="brand-grid"></div>
