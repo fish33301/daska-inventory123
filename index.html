@@ -528,22 +528,22 @@ input[type="date"]:focus,input[type="text"]:focus{border-color:#378ADD;box-shado
           <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
           <input type="date" id="deptMainDateInput" onchange="renderDeptDashMain()">
           <button class="btn" id="deptMainToggleBtn" onclick="toggleDeptMainUnit()" style="font-weight:600;">🔢 個数表示</button>
+          <button class="btn" onclick="openDeptVariantDetail()">📐 改版明細</button>
           <button class="btn primary" onclick="exportDeptXLSX()">⬇ 百貨在庫 Excel エクスポート</button>
         </div>
         <div class="summary-row" id="deptMainSummary"></div>
         <div class="sub-tab-bar" id="deptMainBrandTabs"></div>
         <div class="brand-grid" id="deptMainGrid"></div>
-        <!-- 改版明細（百貨） -->
-        <div style="margin-top:24px;">
-          <div style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 0;border-top:1px solid var(--border-color);" onclick="toggleDeptVariantDetail()">
-            <span id="deptVariantToggleIcon" style="font-size:13px;color:var(--text-secondary);">▶</span>
-            <span style="font-size:14px;font-weight:700;color:var(--text-primary);">📐 改版明細（百貨）</span>
-          </div>
-          <div id="deptVariantDetailBody" style="display:none;">
-            <div class="summary-row" id="deptVariantSummary"></div>
-            <div id="deptVariantGrid" class="brand-grid"></div>
-          </div>
+      </div>
+      <!-- 改版明細（百貨）── 別画面 -->
+      <div id="dept-variant" style="display:none;">
+        <div class="toolbar-layout">
+          <button class="btn" onclick="closeDeptVariantDetail()">← 百貨在庫に戻る</button>
+          <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
+          <input type="date" id="deptVariantDateInput" disabled style="background:#F1F5F9;">
         </div>
+        <div class="summary-row" id="deptVariantSummary"></div>
+        <div id="deptVariantGrid" class="brand-grid"></div>
       </div>
       <!-- 百貨棚卸 -->
       <div id="dept-count" style="display:none;">
@@ -2426,19 +2426,19 @@ window.renderGuestChannelDash=async function(tabId, channelKey){
     <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">${channelKey} 総箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
     <div class="stat" style="background:#FFF8E1;border-color:#FFD54F"><div class="stat-l" style="color:#E65100">金額</div><div class="stat-v" style="color:#BF360C;font-size:16px;">${totalValue>0?'¥'+totalValue.toLocaleString():'—'}</div></div>
     <div class="stat"><div class="stat-l">計算日</div><div class="stat-v" style="font-size:15px;">${d}</div></div>`;
-  if(tabId==='dept'){
-    const variantBody=document.getElementById('guestDeptVariantDetailBody');
-    if(variantBody && variantBody.style.display!=='none') renderGuestVariantView();
-  }
 };
 
-window.toggleGuestDeptVariantDetail=function(){
-  const body=document.getElementById('guestDeptVariantDetailBody');
-  const icon=document.getElementById('guestDeptVariantToggleIcon');
-  const opening=body.style.display==='none';
-  body.style.display=opening?'block':'none';
-  icon.textContent=opening?'▼':'▶';
-  if(opening) renderGuestVariantView();
+window.openGuestDeptVariantDetail=function(){
+  document.getElementById('guest-dept').style.display='none';
+  document.getElementById('guest-dept-variant').style.display='';
+  const d=document.getElementById('guestDeptDateInput').value;
+  document.getElementById('guestVariantDateInput').value=d;
+  renderGuestVariantView();
+};
+
+window.closeGuestDeptVariantDetail=function(){
+  document.getElementById('guest-dept-variant').style.display='none';
+  document.getElementById('guest-dept').style.display='';
 };
 
 window.renderGuestVariantView=async function(){
@@ -2616,13 +2616,17 @@ window.toggleHistBlock=function(header){
   grid.style.display=header.classList.contains('collapsed')?'none':'grid';
 };
 
-window.toggleDeptVariantDetail=function(){
-  const body=document.getElementById('deptVariantDetailBody');
-  const icon=document.getElementById('deptVariantToggleIcon');
-  const opening=body.style.display==='none';
-  body.style.display=opening?'block':'none';
-  icon.textContent=opening?'▼':'▶';
-  if(opening) renderDeptVariantDetail();
+window.openDeptVariantDetail=function(){
+  document.getElementById('dept-stock').style.display='none';
+  document.getElementById('dept-variant').style.display='';
+  const d=document.getElementById('deptMainDateInput').value;
+  document.getElementById('deptVariantDateInput').value=d;
+  renderDeptVariantDetail();
+};
+
+window.closeDeptVariantDetail=function(){
+  document.getElementById('dept-variant').style.display='none';
+  document.getElementById('dept-stock').style.display='';
 };
 
 window.renderDeptVariantDetail=async function(){
@@ -4408,8 +4412,6 @@ window.renderDeptDashMain=async function(){
   const d=document.getElementById('deptMainDateInput').value;
   if(!d) return;
   await renderDeptDashInto(d,'deptMainGrid','deptMainSummary','dept');
-  const variantBody=document.getElementById('deptVariantDetailBody');
-  if(variantBody && variantBody.style.display!=='none') renderDeptVariantDetail();
 };
 
 window.switchDeptMainBrand=function(brandId){
@@ -4732,20 +4734,20 @@ window.startGuestApp=startGuestApp;
         <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
         <input type="date" id="guestDeptDateInput" onchange="renderGuestChannelDash('dept','VT百貨')">
         <button class="btn" id="guestDeptToggleBtn" onclick="toggleGuestChannelUnit('dept')" style="font-weight:600;">🔢 個数表示</button>
+        <button class="btn" onclick="openGuestDeptVariantDetail()">📐 改版明細</button>
       </div>
       <div class="summary-row" id="guestDeptSummary"></div>
       <div class="brand-grid" id="guestDeptGrid"></div>
-      <!-- 改版明細（百貨） -->
-      <div style="margin-top:24px;">
-        <div style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 0;border-top:1px solid var(--border-color);" onclick="toggleGuestDeptVariantDetail()">
-          <span id="guestDeptVariantToggleIcon" style="font-size:13px;color:var(--text-secondary);">▶</span>
-          <span style="font-size:14px;font-weight:700;color:var(--text-primary);">📐 改版明細（百貨）</span>
-        </div>
-        <div id="guestDeptVariantDetailBody" style="display:none;">
-          <div class="summary-row" id="guestVariantSummary"></div>
-          <div id="guestVariantGrid" class="brand-grid"></div>
-        </div>
+    </div>
+    <!-- 改版明細（百貨）── 別画面 -->
+    <div id="guest-dept-variant" style="display:none;">
+      <div class="toolbar-layout">
+        <button class="btn" onclick="closeGuestDeptVariantDetail()">← 百貨在庫に戻る</button>
+        <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
+        <input type="date" id="guestVariantDateInput" disabled style="background:#F1F5F9;">
       </div>
+      <div class="summary-row" id="guestVariantSummary"></div>
+      <div id="guestVariantGrid" class="brand-grid"></div>
     </div>
     <!-- EC在庫 -->
     <div id="guest-ec" style="display:none;">
