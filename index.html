@@ -377,6 +377,8 @@ input[type="date"]:focus,input[type="text"]:focus{border-color:#378ADD;box-shado
       <button class="tab active" data-tab="analytics" onclick="switchTab('analytics')">📈 <span class="tab-label-full">分析</span><span class="tab-label-short">分析</span></button>
       <button class="tab" data-tab="dept" onclick="switchTab('dept')">🏬 <span class="tab-label-full">百貨</span><span class="tab-label-short">百貨</span></button>
       <button class="tab" data-tab="ec" onclick="switchTab('ec')">🛒 <span class="tab-label-full">EC</span><span class="tab-label-short">EC</span></button>
+      <button class="tab" data-tab="web" onclick="switchTab('web')">🌐 <span class="tab-label-full">WEB</span><span class="tab-label-short">WEB</span></button>
+      <button class="tab" data-tab="kaitori" onclick="switchTab('kaitori')">🛍 <span class="tab-label-full">買取</span><span class="tab-label-short">買取</span></button>
       <button class="tab" data-tab="dash" onclick="switchTab('dash')">📊 <span class="tab-label-full">総量在庫</span><span class="tab-label-short">総量</span></button>
       <button class="tab" data-tab="edit" onclick="switchTab('edit')">📝 <span class="tab-label-full">入庫/棚卸</span><span class="tab-label-short">入庫</span></button>
       <button class="tab" data-tab="dist" onclick="switchTab('dist')">🚚 <span class="tab-label-full">通路配分</span><span class="tab-label-short">配分</span></button>
@@ -597,6 +599,78 @@ input[type="date"]:focus,input[type="text"]:focus{border-color:#378ADD;box-shado
       <!-- EC記録 -->
       <div id="ec-history" style="display:none;">
         <div id="ecHistoryTable"></div>
+      </div>
+    </div>
+    <!-- ══ WEB ══ -->
+    <div class="view" id="view-web">
+      <div class="tab-bar" style="margin-bottom:16px;">
+        <button class="tab active" id="webMainTab1" onclick="switchWebMainTab('stock')">🌐 WEB在庫</button>
+        <button class="tab" id="webMainTab2" onclick="switchWebMainTab('count')">📋 WEB棚卸</button>
+        <button class="tab" id="webMainTab3" onclick="switchWebMainTab('history')">📅 記録</button>
+      </div>
+      <!-- WEB在庫 -->
+      <div id="web-stock">
+        <div class="toolbar-layout">
+          <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
+          <input type="date" id="webMainDateInput" onchange="renderWebMainDash()">
+          <button class="btn" id="webMainToggleBtn" onclick="toggleWebMainUnit()" style="font-weight:600;">🔢 個数表示</button>
+          <button class="btn primary" onclick="exportWebXLSX()">⬇ WEB在庫 Excel エクスポート</button>
+        </div>
+        <div class="summary-row" id="webMainSummary"></div>
+        <div class="sub-tab-bar" id="webMainBrandTabs"></div>
+        <div class="brand-grid" id="webMainGrid"></div>
+      </div>
+      <!-- WEB棚卸 -->
+      <div id="web-count" style="display:none;">
+        <div class="toolbar-layout" style="position:sticky;top:0;background:#fff;z-index:100;padding:10px 0;border-bottom:1px solid var(--border-color);margin-bottom:12px;">
+          <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">日付を選択</label>
+          <input type="date" id="webCountDateInput" onchange="loadWebChannelStock(this.value)">
+          <button class="btn primary" onclick="saveWebChannelStock()">💾 すべて保存</button>
+          <button class="btn danger" onclick="resetWebChannelStock()">🗑 当日をクリア</button>
+        </div>
+        <div class="summary-row" id="webCountSummary"></div>
+        <div class="sub-tab-bar" id="webCountBrandTabs"></div>
+        <div class="model-grid" id="webCountGrid"></div>
+      </div>
+      <!-- WEB記録 -->
+      <div id="web-history" style="display:none;">
+        <div id="webHistoryTable"></div>
+      </div>
+    </div>
+    <!-- ══ 買取 ══ -->
+    <div class="view" id="view-kaitori">
+      <div class="tab-bar" style="margin-bottom:16px;">
+        <button class="tab active" id="kaitoriMainTab1" onclick="switchKaitoriMainTab('stock')">🛍 買取在庫</button>
+        <button class="tab" id="kaitoriMainTab2" onclick="switchKaitoriMainTab('count')">📋 買取棚卸</button>
+        <button class="tab" id="kaitoriMainTab3" onclick="switchKaitoriMainTab('history')">📅 記録</button>
+      </div>
+      <!-- 買取在庫 -->
+      <div id="kaitori-stock">
+        <div class="toolbar-layout">
+          <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
+          <input type="date" id="kaitoriMainDateInput" onchange="renderKaitoriMainDash()">
+          <button class="btn" id="kaitoriMainToggleBtn" onclick="toggleKaitoriMainUnit()" style="font-weight:600;">🔢 個数表示</button>
+          <button class="btn primary" onclick="exportKaitoriXLSX()">⬇ 買取在庫 Excel エクスポート</button>
+        </div>
+        <div class="summary-row" id="kaitoriMainSummary"></div>
+        <div class="sub-tab-bar" id="kaitoriMainBrandTabs"></div>
+        <div class="brand-grid" id="kaitoriMainGrid"></div>
+      </div>
+      <!-- 買取棚卸 -->
+      <div id="kaitori-count" style="display:none;">
+        <div class="toolbar-layout" style="position:sticky;top:0;background:#fff;z-index:100;padding:10px 0;border-bottom:1px solid var(--border-color);margin-bottom:12px;">
+          <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">日付を選択</label>
+          <input type="date" id="kaitoriCountDateInput" onchange="loadKaitoriChannelStock(this.value)">
+          <button class="btn primary" onclick="saveKaitoriChannelStock()">💾 すべて保存</button>
+          <button class="btn danger" onclick="resetKaitoriChannelStock()">🗑 当日をクリア</button>
+        </div>
+        <div class="summary-row" id="kaitoriCountSummary"></div>
+        <div class="sub-tab-bar" id="kaitoriCountBrandTabs"></div>
+        <div class="model-grid" id="kaitoriCountGrid"></div>
+      </div>
+      <!-- 買取記録 -->
+      <div id="kaitori-history" style="display:none;">
+        <div id="kaitoriHistoryTable"></div>
       </div>
     </div>
     <!-- ══ 通路配分 ══ -->
@@ -1927,6 +2001,179 @@ window.exportDeptXLSX=async function(){
   XLSX.writeFile(wb, `DASKA_百貨在庫_${d}.xlsx`, {cellStyles:true});
   hideSyncOverlay();
   window.toast('Excel エクスポート完了！');
+};
+
+// ── WEB/買取 共通の Excel エクスポート ──
+async function exportSimpleChannelXLSX(channel, label, dateInputId, fileLabel){
+  const d=document.getElementById(dateInputId).value;
+  if(!d){ alert('先に日付を選択してください'); return; }
+  showSyncOverlay('Excel 出力中...');
+
+  const chStock=await getChannelStock(channel,d);
+  const useChannelStock=Object.keys(chStock).length>0;
+  try{ const snap=await get(ref(db,'transferHistory')); transferCache=snap.val()||{}; }catch(e){}
+  const stocktakeDate=useChannelStock?await getChannelStockDate(channel,d):'0000-00-00';
+  let stockMap={};
+  CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>{
+    let boxes=0, loose=0;
+    if(useChannelStock){
+      const chItem=chStock[item]||{boxes:0,loose:0};
+      boxes=chItem.boxes||0; loose=chItem.loose||0;
+    }
+    const p=priceMap[item]||{};
+    const boxQty=p.qty||1;
+    Object.keys(transferCache).filter(date=>date>=stocktakeDate&&date<=d).sort().forEach(date=>{
+      (transferCache[date]||[]).forEach(t=>{
+        if(t.item!==item) return;
+        const units=t.units||(t.boxes||0)*boxQty;
+        if(t.from===channel){
+          const total=boxes*boxQty+loose-units;
+          if(total<=0){boxes=0;loose=0;}
+          else{boxes=Math.floor(total/boxQty);loose=total%boxQty;}
+        }
+        if(t.to===channel){
+          const total2=boxes*boxQty+loose+units;
+          boxes=Math.floor(total2/boxQty);loose=total2%boxQty;
+        }
+      });
+    });
+    stockMap[item]={boxes,loose};
+  }));
+
+  if(!window.XLSX){
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload=res; s.onerror=rej;
+      document.head.appendChild(s);
+    });
+  }
+  const XLSX=window.XLSX;
+  const wb=XLSX.utils.book_new();
+
+  const COL_W = 5;
+  const GAP   = 1;
+  const BLOCK = COL_W + GAP;
+
+  const brStarts = CP_BRANDS_CONFIG.map((_,i) => i * BLOCK);
+  const maxItems = Math.max(...CP_BRANDS_CONFIG.map(br=>br.items.length));
+
+  const HEADER_ROWS = 3;
+  const FOOTER_ROWS = 3;
+  const totalRows   = HEADER_ROWS + maxItems + FOOTER_ROWS;
+  const totalCols   = CP_BRANDS_CONFIG.length * BLOCK;
+
+  const grid = Array.from({length:totalRows}, ()=>Array(totalCols).fill(''));
+
+  grid[0][0] = `DASKA ${label}在庫總覽　計算日：${d}`;
+
+  CP_BRANDS_CONFIG.forEach((br,bi)=>{
+    const c = brStarts[bi];
+    grid[2][c]   = `${br.label} 品目`;
+    grid[2][c+1] = '箱数';
+    grid[2][c+2] = '個数';
+    grid[2][c+3] = '単価';
+    grid[2][c+4] = '金額';
+  });
+
+  CP_BRANDS_CONFIG.forEach((br,bi)=>{
+    const c = brStarts[bi];
+    br.items.forEach((item,ii)=>{
+      const v = stockMap[item]||{boxes:0,loose:0};
+      const p = priceMap[item]||{};
+      const qty = p.qty||0;
+      const price = p.price||0;
+      const totalUnits = v.boxes*qty + (v.loose||0);
+      const val = qty>0&&price>0 ? totalUnits*price : '';
+      grid[HEADER_ROWS+ii][c]   = item;
+      grid[HEADER_ROWS+ii][c+1] = v.boxes||0;
+      grid[HEADER_ROWS+ii][c+2] = qty||'';
+      grid[HEADER_ROWS+ii][c+3] = price||'';
+      grid[HEADER_ROWS+ii][c+4] = val;
+    });
+  });
+
+  const subtotalRow = HEADER_ROWS + maxItems + 1;
+  let grandBoxes = 0, grandValue = 0;
+  CP_BRANDS_CONFIG.forEach((br,bi)=>{
+    const c = brStarts[bi];
+    const brBoxes = br.items.reduce((s,item)=>s+(stockMap[item]||{boxes:0}).boxes,0);
+    const brVal   = br.items.reduce((s,item)=>{
+      const v=stockMap[item]||{boxes:0,loose:0};
+      const p=priceMap[item]||{};
+      if(!p.qty||!p.price) return s;
+      return s+(v.boxes*p.qty+(v.loose||0))*p.price;
+    },0);
+    grandBoxes += brBoxes;
+    grandValue += brVal;
+    grid[subtotalRow][c]   = `${br.label} 小計`;
+    grid[subtotalRow][c+1] = brBoxes;
+    grid[subtotalRow][c+4] = brVal||'';
+  });
+
+  const grandRow = subtotalRow + 1;
+  grid[grandRow][0] = '全ブランド合計';
+  grid[grandRow][1] = grandBoxes;
+  grid[grandRow][4] = grandValue||'';
+
+  const ws = XLSX.utils.aoa_to_sheet(grid);
+
+  const colWidths = [];
+  CP_BRANDS_CONFIG.forEach(br=>{
+    const maxLen = Math.max(...br.items.map(s=>s.length), br.label.length+4);
+    colWidths.push({wch: Math.max(maxLen, 14)});
+    colWidths.push({wch: 7});
+    colWidths.push({wch: 7});
+    colWidths.push({wch: 8});
+    colWidths.push({wch: 12});
+    colWidths.push({wch: 2});
+  });
+  ws['!cols'] = colWidths;
+
+  const border = {
+    top:    {style:'thin', color:{rgb:'AAAAAA'}},
+    bottom: {style:'thin', color:{rgb:'AAAAAA'}},
+    left:   {style:'thin', color:{rgb:'AAAAAA'}},
+    right:  {style:'thin', color:{rgb:'AAAAAA'}},
+  };
+  const headerFills = {
+    'DES':  'F5D0D0', 'LF': 'FAE5C0', 'LE': 'D0EDD8', 'YT': 'D0DCF5', '限定': 'E8D0F5', 'チーズ': 'FFF8E1'
+  };
+
+  for(let r=2; r<totalRows; r++){
+    CP_BRANDS_CONFIG.forEach((br, bi)=>{
+      const cStart = brStarts[bi];
+      for(let cc=0; cc<COL_W; cc++){
+        const col = cStart + cc;
+        const cellAddr = XLSX.utils.encode_cell({r, c: col});
+        if(!ws[cellAddr]) ws[cellAddr] = {v:'', t:'s'};
+        const isHeader = r === 2;
+        const isSubtotal = r === subtotalRow;
+        const isGrand = r === grandRow;
+        const fillColor = isHeader ? (headerFills[br.label]||'E2E8F0') :
+                          isSubtotal ? 'F1F5F9' :
+                          isGrand ? 'E2E8F0' : 'FFFFFF';
+        ws[cellAddr].s = {
+          border,
+          fill: { patternType:'solid', fgColor:{rgb: fillColor} },
+          font: { bold: isHeader || isSubtotal || isGrand, sz: isGrand ? 11 : 10 },
+          alignment: { horizontal: cc===0 ? 'left' : 'right', vertical:'center' },
+        };
+      }
+    });
+  }
+
+  XLSX.utils.book_append_sheet(wb, ws, `${label}在庫總覽`);
+  XLSX.writeFile(wb, `DASKA_${fileLabel}在庫_${d}.xlsx`, {cellStyles:true});
+  hideSyncOverlay();
+  window.toast('Excel エクスポート完了！');
+}
+
+window.exportWebXLSX=async function(){
+  await exportSimpleChannelXLSX('WEB','WEB','webMainDateInput','WEB');
+};
+window.exportKaitoriXLSX=async function(){
+  await exportSimpleChannelXLSX('買取','買取','kaitoriMainDateInput','買取');
 };
 
 window.exportDeptVariantXLSX=async function(dateInputId){
@@ -4410,6 +4657,8 @@ window.switchTab=function(t){
   document.getElementById('view-dash').classList.toggle('active',t==='dash');
   document.getElementById('view-dept').classList.toggle('active',t==='dept');
   document.getElementById('view-ec').classList.toggle('active',t==='ec');
+  document.getElementById('view-web').classList.toggle('active',t==='web');
+  document.getElementById('view-kaitori').classList.toggle('active',t==='kaitori');
   document.getElementById('view-dist').classList.toggle('active',t==='dist');
   document.getElementById('view-price').classList.toggle('active',t==='price');
   document.getElementById('view-analytics').classList.toggle('active',t==='analytics');
@@ -4422,6 +4671,14 @@ window.switchTab=function(t){
   if(t==='ec'){
     if(!document.getElementById('ecMainDateInput').value) document.getElementById('ecMainDateInput').value=today;
     switchECMainTab('stock');
+  }
+  if(t==='web'){
+    if(!document.getElementById('webMainDateInput').value) document.getElementById('webMainDateInput').value=today;
+    switchWebMainTab('stock');
+  }
+  if(t==='kaitori'){
+    if(!document.getElementById('kaitoriMainDateInput').value) document.getElementById('kaitoriMainDateInput').value=today;
+    switchKaitoriMainTab('stock');
   }
   if(t==='dist'){ switchDistSubTab('transfer'); }
   if(t==='analytics'){
@@ -4453,8 +4710,8 @@ async function renderChannelHistoryInEl(channel, elId){
     }
     const itemOrder=[];
     CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>itemOrder.push(item)));
-    const chColors={'VT百貨':'#E6F1FB','EC':'#EAF3DE'};
-    const chIcons={'VT百貨':'🏬','EC':'🛒'};
+    const chColors={'VT百貨':'#E6F1FB','EC':'#EAF3DE','WEB':'#FFF8E1','買取':'#F3E8FF'};
+    const chIcons={'VT百貨':'🏬','EC':'🛒','WEB':'🌐','買取':'🛍'};
     const filterHtml=`
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
         <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">日付フィルター</label>
@@ -4481,8 +4738,8 @@ window.renderChannelHistoryFiltered=function(channel, elId){
     const filtered=sel.value==='all'?allDates:[sel.value];
     const itemOrder=[];
     CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>itemOrder.push(item)));
-    const chColors={'VT百貨':'#E6F1FB','EC':'#EAF3DE'};
-    const chIcons={'VT百貨':'🏬','EC':'🛒'};
+    const chColors={'VT百貨':'#E6F1FB','EC':'#EAF3DE','WEB':'#FFF8E1','買取':'#F3E8FF'};
+    const chIcons={'VT百貨':'🏬','EC':'🛒','WEB':'🌐','買取':'🛍'};
     renderChannelHistoryContent(channel, elId, data, filtered, itemOrder, chColors, chIcons);
   });
 };
@@ -4517,9 +4774,12 @@ function renderChannelHistoryContent(channel, elId, data, dates, itemOrder, chCo
         let stockStr=`<span style="font-weight:700;font-size:15px;">${boxes}箱</span>`;
         if(deptBoxes>0) stockStr+=` <span style="background:#FFF8E1;color:#92400E;font-size:11px;padding:2px 6px;border-radius:4px;font-weight:600;">百貨:${deptBoxes}箱</span>`;
         if(loose>0) stockStr+=` <span style="color:var(--text-secondary);font-size:12px;">+${loose}個</span>`;
+        const itemEsc=item.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid #F1F5F9;">
           <span style="font-size:13px;">${item}</span>
-          <div style="display:flex;align-items:center;gap:8px;">${diffStr}${stockStr}</div>
+          <div style="display:flex;align-items:center;gap:8px;">${diffStr}${stockStr}
+            <button class="del-history-item-btn" data-channel="${channel}" data-el-id="${elId}" data-date="${date}" data-item="${itemEsc}" title="この品目を削除" style="border:none;background:none;color:#CBD5E1;cursor:pointer;font-size:14px;padding:2px 4px;line-height:1;" onmouseover="this.style.color='#E53E3E'" onmouseout="this.style.color='#CBD5E1'">✕</button>
+          </div>
         </div>`;
       }).join('');
       return `<div style="margin-bottom:4px;">
@@ -4533,11 +4793,45 @@ function renderChannelHistoryContent(channel, elId, data, dates, itemOrder, chCo
         <span style="font-size:15px;font-weight:700;">${date}</span>
         <span style="margin-left:auto;background:white;border:1px solid var(--border-color);border-radius:20px;padding:3px 12px;font-size:13px;font-weight:700;color:var(--blue-dark);">${totalBoxes} 箱</span>
         ${prevDate?`<span style="font-size:11px;color:var(--text-secondary);">前回: ${prevDate}</span>`:''}
+        <button onclick="deleteChannelHistoryDay('${channel}','${elId}','${date}')" title="この日の棚卸記録を全て削除" style="border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;font-size:11px;padding:4px 10px;border-radius:6px;font-weight:600;">🗑 この日を削除</button>
       </div>
       ${brandCards||'<div style="padding:12px;font-size:13px;color:var(--text-secondary);">データなし</div>'}
     </div>`;
   }).join('');
+
+  // 品目削除ボタンのイベント委譲（品目名に特殊文字が含まれても安全）
+  contentEl.onclick=function(e){
+    const btn=e.target.closest('.del-history-item-btn');
+    if(!btn) return;
+    deleteChannelHistoryItem(btn.dataset.channel, btn.dataset.elId, btn.dataset.date, btn.dataset.item);
+  };
 }
+
+window.deleteChannelHistoryDay=async function(channel, elId, date){
+  if(!confirm(`${date} の棚卸記録をすべて削除しますか？\nこの操作は取り消せません。`)) return;
+  showSyncOverlay('削除中...');
+  try{
+    await remove(ref(db,`channelStock/${channel}/${date}`));
+    window.toast('削除しました');
+  } catch(e){
+    window.toast('削除失敗：'+e.message);
+  }
+  hideSyncOverlay();
+  renderChannelHistoryInEl(channel, elId);
+};
+
+window.deleteChannelHistoryItem=async function(channel, elId, date, item){
+  if(!confirm(`${date} の「${item}」を削除しますか？`)) return;
+  showSyncOverlay('削除中...');
+  try{
+    await remove(ref(db,`channelStock/${channel}/${date}/${item}`));
+    window.toast('削除しました');
+  } catch(e){
+    window.toast('削除失敗：'+e.message);
+  }
+  hideSyncOverlay();
+  renderChannelHistoryInEl(channel, elId);
+};
 
 window.switchDeptMainTab=function(tab){
   document.getElementById('deptMainTab1').classList.toggle('active',tab==='stock');
@@ -4571,6 +4865,40 @@ window.switchECMainTab=function(tab){
     loadECChannelStock(document.getElementById('ecCountDateInput').value);
   }
   if(tab==='history') renderChannelHistoryInEl('EC','ecHistoryTable');
+};
+
+// ── WEB tab ──
+window.switchWebMainTab=function(tab){
+  document.getElementById('webMainTab1').classList.toggle('active',tab==='stock');
+  document.getElementById('webMainTab2').classList.toggle('active',tab==='count');
+  document.getElementById('webMainTab3').classList.toggle('active',tab==='history');
+  document.getElementById('web-stock').style.display=tab==='stock'?'':'none';
+  document.getElementById('web-count').style.display=tab==='count'?'':'none';
+  document.getElementById('web-history').style.display=tab==='history'?'':'none';
+  if(tab==='stock') renderWebMainDash();
+  if(tab==='count'){
+    const today=new Date().toISOString().slice(0,10);
+    if(!document.getElementById('webCountDateInput').value) document.getElementById('webCountDateInput').value=today;
+    loadWebChannelStock(document.getElementById('webCountDateInput').value);
+  }
+  if(tab==='history') renderChannelHistoryInEl('WEB','webHistoryTable');
+};
+
+// ── 買取 tab ──
+window.switchKaitoriMainTab=function(tab){
+  document.getElementById('kaitoriMainTab1').classList.toggle('active',tab==='stock');
+  document.getElementById('kaitoriMainTab2').classList.toggle('active',tab==='count');
+  document.getElementById('kaitoriMainTab3').classList.toggle('active',tab==='history');
+  document.getElementById('kaitori-stock').style.display=tab==='stock'?'':'none';
+  document.getElementById('kaitori-count').style.display=tab==='count'?'':'none';
+  document.getElementById('kaitori-history').style.display=tab==='history'?'':'none';
+  if(tab==='stock') renderKaitoriMainDash();
+  if(tab==='count'){
+    const today=new Date().toISOString().slice(0,10);
+    if(!document.getElementById('kaitoriCountDateInput').value) document.getElementById('kaitoriCountDateInput').value=today;
+    loadKaitoriChannelStock(document.getElementById('kaitoriCountDateInput').value);
+  }
+  if(tab==='history') renderChannelHistoryInEl('買取','kaitoriHistoryTable');
 };
 
 // renderDeptDash/renderECDash を新しい view-dept/view-ec の grid に向ける wrapper
@@ -4608,6 +4936,105 @@ window.renderECDashMain=async function(){
 window.switchECMainBrand=function(brandId){
   ecMainBrand=brandId;
   renderECDashMain();
+};
+
+// ── WEB/買取 共通の在庫レンダリング（百貨と同じ棚卸±調貨ロジック） ──
+let webMainBrand='ALL', kaitoriMainBrand='ALL';
+async function renderSimpleChannelDashInto(channel, label, d, gridId, summaryId, unitKey, brandFilter, tabsElId, switchBrandFnName){
+  if(!d) return;
+  const chStock=await getChannelStock(channel,d);
+  const useChannelStock=Object.keys(chStock).length>0;
+  const showUnit=channelShowUnit[unitKey]||false;
+  try{ const snap=await get(ref(db,'transferHistory')); transferCache=snap.val()||{}; }catch(e){}
+  let totalBoxes=0, totalItems=0, totalValue=0;
+  const grid=document.getElementById(gridId); grid.innerHTML='';
+  const tabsEl=document.getElementById(tabsElId);
+  if(tabsEl){
+    tabsEl.innerHTML=`<button class="sub-tab${brandFilter==='ALL'?' active':''}" onclick="${switchBrandFnName}('ALL')">全部</button>`+
+      CP_BRANDS_CONFIG.map(b=>`<button class="sub-tab${b.id===brandFilter?' active':''}" onclick="${switchBrandFnName}('${b.id}')">${b.label}</button>`).join('');
+  }
+  const brandsToRender=brandFilter==='ALL'?CP_BRANDS_CONFIG:CP_BRANDS_CONFIG.filter(b=>b.id===brandFilter);
+  const stocktakeDate=useChannelStock?await getChannelStockDate(channel,d):'0000-00-00';
+  brandsToRender.forEach(br=>{
+    const card=document.createElement('div'); card.className='brand-card';
+    let brVal=0;
+    const rows=br.items.map(item=>{
+      let boxes=0, loose=0;
+      if(useChannelStock){
+        const chItem=chStock[item]||{boxes:0,loose:0};
+        boxes=chItem.boxes||0; loose=chItem.loose||0;
+        SUFFIXES.forEach(suf=>{
+          const vItem=chStock[item+suf];
+          if(vItem){ boxes+=vItem.boxes||0; loose+=vItem.loose||0; }
+        });
+      }
+      const p=priceMap[item]||{};
+      const boxQty=p.qty||1;
+      Object.keys(transferCache).filter(date=>date>=stocktakeDate&&date<=d).sort().forEach(date=>{
+        (transferCache[date]||[]).forEach(t=>{
+          if(t.item!==item) return;
+          const units=t.units||(t.boxes||0)*boxQty;
+          if(t.from===channel){
+            const total=boxes*boxQty+loose-units;
+            if(total<=0){boxes=0;loose=0;} else {boxes=Math.floor(total/boxQty);loose=total%boxQty;}
+          }
+          if(t.to===channel){
+            const total2=boxes*boxQty+loose+units;
+            boxes=Math.floor(total2/boxQty);loose=total2%boxQty;
+          }
+        });
+      });
+      const isEmpty=boxes===0&&loose===0;
+      if(!isEmpty){ totalItems++; totalBoxes+=boxes; }
+      const val=boxes*(p.qty||0)*(p.price||0);
+      brVal+=val; totalValue+=val;
+      let display;
+      if(showUnit && p.qty>0) display=`${boxes*p.qty+(loose||0)} 個`;
+      else display=boxes>0?`${boxes}箱${loose>0?` +${loose}個`:''}`:`0 箱`;
+      return `<div class="brand-row"><span class="rname">${item}</span><div class="stock-val ${isEmpty?'zero':''}">${display}</div></div>`;
+    }).join('');
+    const footer=brVal>0?`<div class="brand-value-footer"><span class="brand-value-label">💰 ${label} ${br.label}</span><span class="brand-value-amount">¥${brVal.toLocaleString()}</span></div>`:'';
+    card.innerHTML=`<div class="brand-header ${br.cls}">${br.label}</div>${rows}${footer}`;
+    grid.appendChild(card);
+  });
+  const srcLabel=useChannelStock?'棚卸±調貨':'調貨のみ';
+  document.getElementById(summaryId).innerHTML=`
+    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">${label} 品目数（${srcLabel}）</div><div class="stat-v" style="color:#0C447C">${totalItems}</div></div>
+    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">${label} 総箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
+    <div class="stat" style="background:#FFF8E1;border-color:#FFD54F"><div class="stat-l" style="color:#E65100">${label} 金額</div><div class="stat-v" style="color:#BF360C;font-size:16px;">${totalValue>0?'¥'+totalValue.toLocaleString():'—'}</div></div>
+    <div class="stat"><div class="stat-l">計算日</div><div class="stat-v" style="font-size:15px;">${d}</div></div>`;
+}
+
+window.toggleWebMainUnit=function(){
+  channelShowUnit['web']=!channelShowUnit['web'];
+  const btn=document.getElementById('webMainToggleBtn');
+  if(btn) btn.textContent=channelShowUnit['web']?'📦 箱表示':'🔢 個数表示';
+  renderWebMainDash();
+};
+window.renderWebMainDash=async function(){
+  const d=document.getElementById('webMainDateInput').value;
+  if(!d) return;
+  await renderSimpleChannelDashInto('WEB','WEB',d,'webMainGrid','webMainSummary','web',webMainBrand,'webMainBrandTabs','switchWebMainBrand');
+};
+window.switchWebMainBrand=function(brandId){
+  webMainBrand=brandId;
+  renderWebMainDash();
+};
+
+window.toggleKaitoriMainUnit=function(){
+  channelShowUnit['kaitori']=!channelShowUnit['kaitori'];
+  const btn=document.getElementById('kaitoriMainToggleBtn');
+  if(btn) btn.textContent=channelShowUnit['kaitori']?'📦 箱表示':'🔢 個数表示';
+  renderKaitoriMainDash();
+};
+window.renderKaitoriMainDash=async function(){
+  const d=document.getElementById('kaitoriMainDateInput').value;
+  if(!d) return;
+  await renderSimpleChannelDashInto('買取','買取',d,'kaitoriMainGrid','kaitoriMainSummary','kaitori',kaitoriMainBrand,'kaitoriMainBrandTabs','switchKaitoriMainBrand');
+};
+window.switchKaitoriMainBrand=function(brandId){
+  kaitoriMainBrand=brandId;
+  renderKaitoriMainDash();
 };
 
 // 百貨棚卸（deptCount）
@@ -4724,6 +5151,224 @@ window.deptCountSet=function(key,v){
     }
   }
   deptCountForm[key]=v;
+};
+
+// ── WEB/買取 共通の棚卸入力ロジック ──
+let webCountForm={}, webCountBrand='DES';
+let kaitoriCountForm={}, kaitoriCountBrand='DES';
+
+window.loadWebChannelStock=async function(d){
+  try{
+    const snap=await get(ref(db,`channelStock/WEB/${dateToKey(d)}`));
+    webCountForm={};
+    const data=snap.val()||{};
+    Object.entries(data).forEach(([item,val])=>{
+      webCountForm[item]=typeof val==='object'?(val.boxes||0):Number(val)||0;
+      if(typeof val==='object'&&val.loose) webCountForm[item+'_loose']=val.loose;
+    });
+  } catch(e){ webCountForm={}; }
+  renderWebCountGrid();
+};
+window.saveWebChannelStock=async function(){
+  const d=document.getElementById('webCountDateInput').value;
+  if(!d){ alert('日付を選択してください'); return; }
+  const obj={};
+  Object.keys(webCountForm).filter(k=>!k.includes('_loose')).forEach(item=>{
+    const boxes=Number(webCountForm[item])||0;
+    const loose=Number(webCountForm[item+'_loose'])||0;
+    if(boxes>0||loose>0){ obj[item]={boxes}; if(loose>0) obj[item].loose=loose; }
+  });
+  showSyncOverlay('保存中...');
+  try{ await set(ref(db,`channelStock/WEB/${dateToKey(d)}`),obj); window.toast('WEB棚卸を保存しました！'); }
+  catch(e){ window.toast('保存失敗：'+e.message); }
+  hideSyncOverlay();
+};
+window.resetWebChannelStock=async function(){
+  const d=document.getElementById('webCountDateInput').value;
+  if(!confirm('WEB棚卸データをクリアしますか？')) return;
+  showSyncOverlay('クリア中...');
+  try{ await remove(ref(db,`channelStock/WEB/${dateToKey(d)}`)); webCountForm={}; renderWebCountGrid(); window.toast('クリアしました'); }
+  catch(e){ window.toast('クリア失敗：'+e.message); }
+  hideSyncOverlay();
+};
+function renderWebCountGrid(){
+  const br=CP_BRANDS_CONFIG.find(b=>b.id===webCountBrand)||CP_BRANDS_CONFIG[0];
+  document.getElementById('webCountBrandTabs').innerHTML=CP_BRANDS_CONFIG.map(b=>
+    `<button class="sub-tab${b.id===webCountBrand?' active':''}" onclick="switchWebCountBrand('${b.id}')">${b.label}</button>`).join('');
+  let total=0;
+  Object.keys(webCountForm).filter(k=>!k.includes('_loose')).forEach(k=>total+=Number(webCountForm[k])||0);
+  document.getElementById('webCountSummary').innerHTML=`
+    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">WEB 棚卸</div><div class="stat-v" style="color:#0C447C">${total} 箱</div></div>`;
+  const grid=document.getElementById('webCountGrid'); grid.innerHTML='';
+  br.items.forEach(baseItem=>{
+    const variantKeys=Object.keys(webCountForm).filter(k=>{
+      if(k.includes('_loose')) return false;
+      if(k===baseItem) return false;
+      return SUFFIXES.some(s=>k===baseItem+s);
+    });
+    const allKeys=[baseItem, ...variantKeys];
+    let cardTotal=0;
+    let html=`<div class="card-head"><span class="card-title">${baseItem}</span></div><div class="variant-rows-box">`;
+    allKeys.forEach(key=>{
+      const boxes=webCountForm[key]||'';
+      const loose=webCountForm[key+'_loose']||'';
+      const filled=Number(boxes)>0;
+      cardTotal+=Number(boxes)||0;
+      const label=key===baseItem?'オリジナル':key.replace(baseItem,'');
+      html+=`<div class="variant-row${filled?' filled':''}">
+          <span class="v-label">${label}</span>
+          <div class="qty-stepper">
+            <button onclick="webCountStep('${key}',-1)">−</button>
+            <input type="number" class="qty-val" inputmode="numeric" value="${boxes}" oninput="webCountSet('${key}',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+            <button onclick="webCountStep('${key}',1)">+</button>
+          </div>
+        </div>
+        <div style="padding:0 14px 8px;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;color:var(--text-secondary);">＋バラ</span>
+          <input type="number" class="note-input" placeholder="個数" min="0" inputmode="numeric" value="${loose}" oninput="webCountSetRaw('${key}_loose',this.value)" onblur="webCountSet('${key}_loose',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}"
+            style="width:80px;font-size:12px;padding:4px 8px;border:1px dashed #CBD5E1;border-radius:6px;outline:none;background:#FAFAFA;text-align:right;">
+          <span style="font-size:12px;color:var(--text-secondary);">個</span>
+        </div>`;
+    });
+    html+=`</div><div class="card-action-box">
+      <select class="select-ui" onchange="if(this.value){webCountAddSuffix('${baseItem}',this.value);this.value=''}">
+        <option value="">＋ 改版を追加...</option>
+        ${SUFFIXES.filter(s=>!variantKeys.includes(baseItem+s)).map(s=>`<option value="${s}">${baseItem}${s}</option>`).join('')}
+      </select></div>`;
+    const card=document.createElement('div'); card.className='model-card'+(cardTotal>0?' has-any':'');
+    card.innerHTML=html;
+    grid.appendChild(card);
+  });
+}
+window.webCountAddSuffix=function(baseItem,suffix){ webCountForm[baseItem+suffix]=''; renderWebCountGrid(); };
+window.switchWebCountBrand=function(id){ webCountBrand=id; renderWebCountGrid(); };
+window.webCountSetRaw=function(key,v){ webCountForm[key]=v; };
+window.webCountStep=function(item,d){ webCountForm[item]=Math.max(0,(Number(webCountForm[item])||0)+d); renderWebCountGrid(); };
+window.webCountSet=function(key,v){
+  if(key.endsWith('_loose')){
+    const item=key.replace('_loose','');
+    const loose=Number(v)||0;
+    let p=priceMap[item]||{};
+    if(!p.qty){
+      const baseItem=item.replace(/N[2-6]?$/,'');
+      p=priceMap[baseItem]||{};
+    }
+    const boxQty=p.qty||0;
+    if(boxQty>0 && loose>=boxQty){
+      webCountForm[item]=(Number(webCountForm[item])||0)+Math.floor(loose/boxQty);
+      webCountForm[key]=loose%boxQty;
+      renderWebCountGrid();
+      return;
+    }
+  }
+  webCountForm[key]=v;
+};
+
+window.loadKaitoriChannelStock=async function(d){
+  try{
+    const snap=await get(ref(db,`channelStock/買取/${dateToKey(d)}`));
+    kaitoriCountForm={};
+    const data=snap.val()||{};
+    Object.entries(data).forEach(([item,val])=>{
+      kaitoriCountForm[item]=typeof val==='object'?(val.boxes||0):Number(val)||0;
+      if(typeof val==='object'&&val.loose) kaitoriCountForm[item+'_loose']=val.loose;
+    });
+  } catch(e){ kaitoriCountForm={}; }
+  renderKaitoriCountGrid();
+};
+window.saveKaitoriChannelStock=async function(){
+  const d=document.getElementById('kaitoriCountDateInput').value;
+  if(!d){ alert('日付を選択してください'); return; }
+  const obj={};
+  Object.keys(kaitoriCountForm).filter(k=>!k.includes('_loose')).forEach(item=>{
+    const boxes=Number(kaitoriCountForm[item])||0;
+    const loose=Number(kaitoriCountForm[item+'_loose'])||0;
+    if(boxes>0||loose>0){ obj[item]={boxes}; if(loose>0) obj[item].loose=loose; }
+  });
+  showSyncOverlay('保存中...');
+  try{ await set(ref(db,`channelStock/買取/${dateToKey(d)}`),obj); window.toast('買取棚卸を保存しました！'); }
+  catch(e){ window.toast('保存失敗：'+e.message); }
+  hideSyncOverlay();
+};
+window.resetKaitoriChannelStock=async function(){
+  const d=document.getElementById('kaitoriCountDateInput').value;
+  if(!confirm('買取棚卸データをクリアしますか？')) return;
+  showSyncOverlay('クリア中...');
+  try{ await remove(ref(db,`channelStock/買取/${dateToKey(d)}`)); kaitoriCountForm={}; renderKaitoriCountGrid(); window.toast('クリアしました'); }
+  catch(e){ window.toast('クリア失敗：'+e.message); }
+  hideSyncOverlay();
+};
+function renderKaitoriCountGrid(){
+  const br=CP_BRANDS_CONFIG.find(b=>b.id===kaitoriCountBrand)||CP_BRANDS_CONFIG[0];
+  document.getElementById('kaitoriCountBrandTabs').innerHTML=CP_BRANDS_CONFIG.map(b=>
+    `<button class="sub-tab${b.id===kaitoriCountBrand?' active':''}" onclick="switchKaitoriCountBrand('${b.id}')">${b.label}</button>`).join('');
+  let total=0;
+  Object.keys(kaitoriCountForm).filter(k=>!k.includes('_loose')).forEach(k=>total+=Number(kaitoriCountForm[k])||0);
+  document.getElementById('kaitoriCountSummary').innerHTML=`
+    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">買取 棚卸</div><div class="stat-v" style="color:#0C447C">${total} 箱</div></div>`;
+  const grid=document.getElementById('kaitoriCountGrid'); grid.innerHTML='';
+  br.items.forEach(baseItem=>{
+    const variantKeys=Object.keys(kaitoriCountForm).filter(k=>{
+      if(k.includes('_loose')) return false;
+      if(k===baseItem) return false;
+      return SUFFIXES.some(s=>k===baseItem+s);
+    });
+    const allKeys=[baseItem, ...variantKeys];
+    let cardTotal=0;
+    let html=`<div class="card-head"><span class="card-title">${baseItem}</span></div><div class="variant-rows-box">`;
+    allKeys.forEach(key=>{
+      const boxes=kaitoriCountForm[key]||'';
+      const loose=kaitoriCountForm[key+'_loose']||'';
+      const filled=Number(boxes)>0;
+      cardTotal+=Number(boxes)||0;
+      const label=key===baseItem?'オリジナル':key.replace(baseItem,'');
+      html+=`<div class="variant-row${filled?' filled':''}">
+          <span class="v-label">${label}</span>
+          <div class="qty-stepper">
+            <button onclick="kaitoriCountStep('${key}',-1)">−</button>
+            <input type="number" class="qty-val" inputmode="numeric" value="${boxes}" oninput="kaitoriCountSet('${key}',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+            <button onclick="kaitoriCountStep('${key}',1)">+</button>
+          </div>
+        </div>
+        <div style="padding:0 14px 8px;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;color:var(--text-secondary);">＋バラ</span>
+          <input type="number" class="note-input" placeholder="個数" min="0" inputmode="numeric" value="${loose}" oninput="kaitoriCountSetRaw('${key}_loose',this.value)" onblur="kaitoriCountSet('${key}_loose',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}"
+            style="width:80px;font-size:12px;padding:4px 8px;border:1px dashed #CBD5E1;border-radius:6px;outline:none;background:#FAFAFA;text-align:right;">
+          <span style="font-size:12px;color:var(--text-secondary);">個</span>
+        </div>`;
+    });
+    html+=`</div><div class="card-action-box">
+      <select class="select-ui" onchange="if(this.value){kaitoriCountAddSuffix('${baseItem}',this.value);this.value=''}">
+        <option value="">＋ 改版を追加...</option>
+        ${SUFFIXES.filter(s=>!variantKeys.includes(baseItem+s)).map(s=>`<option value="${s}">${baseItem}${s}</option>`).join('')}
+      </select></div>`;
+    const card=document.createElement('div'); card.className='model-card'+(cardTotal>0?' has-any':'');
+    card.innerHTML=html;
+    grid.appendChild(card);
+  });
+}
+window.kaitoriCountAddSuffix=function(baseItem,suffix){ kaitoriCountForm[baseItem+suffix]=''; renderKaitoriCountGrid(); };
+window.switchKaitoriCountBrand=function(id){ kaitoriCountBrand=id; renderKaitoriCountGrid(); };
+window.kaitoriCountSetRaw=function(key,v){ kaitoriCountForm[key]=v; };
+window.kaitoriCountStep=function(item,d){ kaitoriCountForm[item]=Math.max(0,(Number(kaitoriCountForm[item])||0)+d); renderKaitoriCountGrid(); };
+window.kaitoriCountSet=function(key,v){
+  if(key.endsWith('_loose')){
+    const item=key.replace('_loose','');
+    const loose=Number(v)||0;
+    let p=priceMap[item]||{};
+    if(!p.qty){
+      const baseItem=item.replace(/N[2-6]?$/,'');
+      p=priceMap[baseItem]||{};
+    }
+    const boxQty=p.qty||0;
+    if(boxQty>0 && loose>=boxQty){
+      kaitoriCountForm[item]=(Number(kaitoriCountForm[item])||0)+Math.floor(loose/boxQty);
+      kaitoriCountForm[key]=loose%boxQty;
+      renderKaitoriCountGrid();
+      return;
+    }
+  }
+  kaitoriCountForm[key]=v;
 };
 
 // EC棚卸（ecCount）
