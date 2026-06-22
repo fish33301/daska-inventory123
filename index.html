@@ -1,4 +1,4 @@
-<!-- DASKA 庫存 v10.7.0.9 2026-06-19 -->
+<!-- DASKA 庫存 v10.0 2026-06-18 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -20,8 +20,6 @@
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{overflow-x:hidden;}
-canvas{max-width:100%;height:auto;}
 :root{
   --blue:#185FA5;--blue-light:#E6F1FB;--blue-mid:#378ADD;--blue-dark:#0C447C;--blue-border:#85B7EB;
   --green:#3B6D11;--green-light:#EAF3DE;--green-mid:#639922;--green-dark:#27500A;--green-border:#97C459;
@@ -61,8 +59,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku
   .brand-grid{grid-template-columns:1fr;}
   .sub-tab-bar{gap:6px;}
   .sub-tab{padding:7px 12px;font-size:13px;}
-  #analyticsChartRow,#guestAnalyticsChartRow{grid-template-columns:1fr!important;}
-  canvas{max-width:260px;margin:0 auto;display:block;}
 }
 
 /* ══ PWA 安裝提示橫幅 ══ */
@@ -374,16 +370,16 @@ input[type="date"]:focus,input[type="text"]:focus{border-color:#378ADD;box-shado
       <span id="mainToast" class="toast"></span>
     </div>
     <div class="tab-bar" style="flex-wrap:wrap;">
-      <button class="tab active" data-tab="analytics" onclick="switchTab('analytics')">📈 <span class="tab-label-full">分析</span><span class="tab-label-short">分析</span></button>
+      <button class="tab active" data-tab="edit" onclick="switchTab('edit')">📝 <span class="tab-label-full">入庫/棚卸</span><span class="tab-label-short">入庫</span></button>
       <button class="tab" data-tab="dept" onclick="switchTab('dept')">🏬 <span class="tab-label-full">百貨</span><span class="tab-label-short">百貨</span></button>
       <button class="tab" data-tab="ec" onclick="switchTab('ec')">🛒 <span class="tab-label-full">EC</span><span class="tab-label-short">EC</span></button>
       <button class="tab" data-tab="dash" onclick="switchTab('dash')">📊 <span class="tab-label-full">総量在庫</span><span class="tab-label-short">総量</span></button>
-      <button class="tab" data-tab="edit" onclick="switchTab('edit')">📝 <span class="tab-label-full">入庫/棚卸</span><span class="tab-label-short">入庫</span></button>
       <button class="tab" data-tab="dist" onclick="switchTab('dist')">🚚 <span class="tab-label-full">通路配分</span><span class="tab-label-short">配分</span></button>
       <button class="tab" data-tab="variant" onclick="switchTab('variant')">🔍 <span class="tab-label-full">改版明細</span><span class="tab-label-short">改版</span></button>
+      <button class="tab" data-tab="analytics" onclick="switchTab('analytics')">📈 <span class="tab-label-full">分析</span><span class="tab-label-short">分析</span></button>
       <button class="tab" data-tab="price" onclick="switchTab('price')">💰 <span class="tab-label-full">単価設定</span><span class="tab-label-short">単価</span></button>
     </div>
-    <div class="view" id="view-edit">
+    <div class="view active" id="view-edit">
       <div class="tab-bar" style="margin-bottom:16px;">
         <button class="tab active" id="editSubTab1" onclick="switchEditSubTab('entry')">📝 入庫/棚卸</button>
         <button class="tab" id="editSubTab2" onclick="switchEditSubTab('history')">📅 記録</button>
@@ -529,10 +525,8 @@ input[type="date"]:focus,input[type="text"]:focus{border-color:#378ADD;box-shado
           <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
           <input type="date" id="deptMainDateInput" onchange="renderDeptDashMain()">
           <button class="btn" id="deptMainToggleBtn" onclick="toggleDeptMainUnit()" style="font-weight:600;">🔢 個数表示</button>
-          <button class="btn primary" onclick="exportDeptXLSX()">⬇ 百貨在庫 Excel エクスポート</button>
         </div>
         <div class="summary-row" id="deptMainSummary"></div>
-        <div class="sub-tab-bar" id="deptMainBrandTabs"></div>
         <div class="brand-grid" id="deptMainGrid"></div>
       </div>
       <!-- 百貨棚卸 -->
@@ -565,10 +559,8 @@ input[type="date"]:focus,input[type="text"]:focus{border-color:#378ADD;box-shado
           <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
           <input type="date" id="ecMainDateInput" onchange="renderECDashMain()">
           <button class="btn" id="ecMainToggleBtn" onclick="toggleECMainUnit()" style="font-weight:600;">🔢 個数表示</button>
-          <button class="btn primary" onclick="exportECXLSX()">⬇ EC在庫 Excel エクスポート</button>
         </div>
         <div class="summary-row" id="ecMainSummary"></div>
-        <div class="sub-tab-bar" id="ecMainBrandTabs"></div>
         <div class="brand-grid" id="ecMainGrid"></div>
       </div>
       <!-- EC棚卸 -->
@@ -590,8 +582,24 @@ input[type="date"]:focus,input[type="text"]:focus{border-color:#378ADD;box-shado
     </div>
     <!-- ══ 通路配分 ══ -->
     <div class="view" id="view-dist">
+      <div class="tab-bar" style="margin-bottom:16px;">
+        <button class="tab active" id="distSubTab1" onclick="switchDistSubTab('init')">📋 初期配分</button>
+        <button class="tab" id="distSubTab2" onclick="switchDistSubTab('transfer')">🔄 調貨記録</button>
+      </div>
+      <!-- 初期配分 -->
+      <div id="dist-init">
+        <div class="toolbar-layout" style="position:sticky;top:0;background:#fff;z-index:100;padding:10px 0;border-bottom:1px solid var(--border-color);margin-bottom:12px;">
+          <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">日付を選択</label>
+          <input type="date" id="distDateInput" onchange="loadDistData(this.value)">
+          <button class="btn primary" onclick="saveDistEntry()" style="min-width:120px;">💾 すべて保存</button>
+          <button class="btn danger" onclick="resetDistForm()">🗑 当日をクリア</button>
+        </div>
+        <div class="summary-row" id="distSummary"></div>
+        <div class="sub-tab-bar" id="distBrandTabs"></div>
+        <div class="model-grid" id="distGrid"></div>
+      </div>
       <!-- 調貨記録 -->
-      <div id="dist-transfer">
+      <div id="dist-transfer" style="display:none;">
         <div class="toolbar-layout" style="position:sticky;top:0;background:#fff;z-index:100;padding:10px 0;border-bottom:1px solid var(--border-color);margin-bottom:12px;">
           <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">日付を選択</label>
           <input type="date" id="transferDateInput">
@@ -787,7 +795,6 @@ const CP_BRANDS_CONFIG = [
 // 狀態
 // ════════════════════════════════
 let currentBrand='DES', currentMode='IN';
-let deptMainBrand='ALL', ecMainBrand='ALL';
 let editForm=initEmptyForm();
 let inCache={}, cpCache={};
 
@@ -1102,7 +1109,6 @@ async function startApp(){
   const today=new Date().toISOString().slice(0,10);
   document.getElementById('editDateInput').value=today;
   document.getElementById('dashDateInput').value=today;
-  document.getElementById('analyticsDateInput').value=today;
 
   // 載入各品牌カスタム品目
   onValue(ref(db,'customItems'),snap=>{
@@ -1158,7 +1164,6 @@ async function startApp(){
   await loadPriceSettings();
   priceReady = true;
   if(cacheReady.in && cacheReady.cp) tryRenderDashboard();
-  renderAnalytics();
   await loadDateData(today);
   applyLang();
 }
@@ -1760,350 +1765,12 @@ window.exportXLSX=async function(){
   window.toast('Excel エクスポート完了！');
 };
 
-window.exportDeptXLSX=async function(){
-  const d=document.getElementById('deptMainDateInput').value;
-  if(!d){ alert('先に日付を選択してください'); return; }
-  showSyncOverlay('Excel 出力中...');
-
-  // ── 百貨在庫の stockMap を算出（renderDeptDashInto と同ロジック） ──
-  const chStock=await getChannelStock('VT百貨',d);
-  const useChannelStock=Object.keys(chStock).length>0;
-  try{ const snap=await get(ref(db,'transferHistory')); transferCache=snap.val()||{}; }catch(e){}
-  const stocktakeDate=useChannelStock?await getChannelStockDate('VT百貨',d):'0000-00-00';
-  let stockMap={};
-  CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>{
-    let boxes=0, loose=0;
-    if(useChannelStock){
-      const chItem=chStock[item]||{boxes:0,loose:0};
-      boxes=chItem.boxes||0; loose=chItem.loose||0;
-    }
-    const p=priceMap[item]||{};
-    const deptBoxQty=p.qty||1;
-    Object.keys(transferCache).filter(date=>date>=stocktakeDate&&date<=d).sort().forEach(date=>{
-      (transferCache[date]||[]).forEach(t=>{
-        if(t.item!==item) return;
-        const units=t.units||(t.boxes||0)*deptBoxQty;
-        if(t.from==='VT百貨'){
-          const total=boxes*deptBoxQty+loose-units;
-          if(total<=0){boxes=0;loose=0;}
-          else{boxes=Math.floor(total/deptBoxQty);loose=total%deptBoxQty;}
-        }
-        if(t.to==='VT百貨'){
-          const total2=boxes*deptBoxQty+loose+units;
-          boxes=Math.floor(total2/deptBoxQty);loose=total2%deptBoxQty;
-        }
-      });
-    });
-    stockMap[item]={boxes,loose};
-  }));
-
-  // ── 動態載入 SheetJS ──
-  if(!window.XLSX){
-    await new Promise((res,rej)=>{
-      const s=document.createElement('script');
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-      s.onload=res; s.onerror=rej;
-      document.head.appendChild(s);
-    });
-  }
-  const XLSX=window.XLSX;
-  const wb=XLSX.utils.book_new();
-
-  const COL_W = 5;
-  const GAP   = 1;
-  const BLOCK = COL_W + GAP;
-
-  const brStarts = CP_BRANDS_CONFIG.map((_,i) => i * BLOCK);
-  const maxItems = Math.max(...CP_BRANDS_CONFIG.map(br=>br.items.length));
-
-  const HEADER_ROWS = 3;
-  const FOOTER_ROWS = 3;
-  const totalRows   = HEADER_ROWS + maxItems + FOOTER_ROWS;
-  const totalCols   = CP_BRANDS_CONFIG.length * BLOCK;
-
-  const grid = Array.from({length:totalRows}, ()=>Array(totalCols).fill(''));
-
-  grid[0][0] = `DASKA 百貨在庫總覽　計算日：${d}`;
-
-  CP_BRANDS_CONFIG.forEach((br,bi)=>{
-    const c = brStarts[bi];
-    grid[2][c]   = `${br.label} 品目`;
-    grid[2][c+1] = '箱数';
-    grid[2][c+2] = '個数';
-    grid[2][c+3] = '単価';
-    grid[2][c+4] = '金額';
-  });
-
-  CP_BRANDS_CONFIG.forEach((br,bi)=>{
-    const c = brStarts[bi];
-    br.items.forEach((item,ii)=>{
-      const v = stockMap[item]||{boxes:0,loose:0};
-      const p = priceMap[item]||{};
-      const qty = p.qty||0;
-      const price = p.price||0;
-      const totalUnits = v.boxes*qty + (v.loose||0);
-      const val = qty>0&&price>0 ? totalUnits*price : '';
-      grid[HEADER_ROWS+ii][c]   = item;
-      grid[HEADER_ROWS+ii][c+1] = v.boxes||0;
-      grid[HEADER_ROWS+ii][c+2] = qty||'';
-      grid[HEADER_ROWS+ii][c+3] = price||'';
-      grid[HEADER_ROWS+ii][c+4] = val;
-    });
-  });
-
-  const subtotalRow = HEADER_ROWS + maxItems + 1;
-  let grandBoxes = 0, grandValue = 0;
-  CP_BRANDS_CONFIG.forEach((br,bi)=>{
-    const c = brStarts[bi];
-    const brBoxes = br.items.reduce((s,item)=>s+(stockMap[item]||{boxes:0}).boxes,0);
-    const brVal   = br.items.reduce((s,item)=>{
-      const v=stockMap[item]||{boxes:0,loose:0};
-      const p=priceMap[item]||{};
-      if(!p.qty||!p.price) return s;
-      return s+(v.boxes*p.qty+(v.loose||0))*p.price;
-    },0);
-    grandBoxes += brBoxes;
-    grandValue += brVal;
-    grid[subtotalRow][c]   = `${br.label} 小計`;
-    grid[subtotalRow][c+1] = brBoxes;
-    grid[subtotalRow][c+4] = brVal||'';
-  });
-
-  const grandRow = subtotalRow + 1;
-  grid[grandRow][0] = '全ブランド合計';
-  grid[grandRow][1] = grandBoxes;
-  grid[grandRow][4] = grandValue||'';
-
-  const ws = XLSX.utils.aoa_to_sheet(grid);
-
-  const colWidths = [];
-  CP_BRANDS_CONFIG.forEach(br=>{
-    const maxLen = Math.max(...br.items.map(s=>s.length), br.label.length+4);
-    colWidths.push({wch: Math.max(maxLen, 14)});
-    colWidths.push({wch: 7});
-    colWidths.push({wch: 7});
-    colWidths.push({wch: 8});
-    colWidths.push({wch: 12});
-    colWidths.push({wch: 2});
-  });
-  ws['!cols'] = colWidths;
-
-  const border = {
-    top:    {style:'thin', color:{rgb:'AAAAAA'}},
-    bottom: {style:'thin', color:{rgb:'AAAAAA'}},
-    left:   {style:'thin', color:{rgb:'AAAAAA'}},
-    right:  {style:'thin', color:{rgb:'AAAAAA'}},
-  };
-  const headerFills = {
-    'DES':  'F5D0D0', 'LF': 'FAE5C0', 'LE': 'D0EDD8', 'YT': 'D0DCF5', '限定': 'E8D0F5', 'チーズ': 'FFF8E1'
-  };
-
-  for(let r=2; r<totalRows; r++){
-    CP_BRANDS_CONFIG.forEach((br, bi)=>{
-      const cStart = brStarts[bi];
-      for(let cc=0; cc<COL_W; cc++){
-        const col = cStart + cc;
-        const cellAddr = XLSX.utils.encode_cell({r, c: col});
-        if(!ws[cellAddr]) ws[cellAddr] = {v:'', t:'s'};
-        const isHeader = r === 2;
-        const isSubtotal = r === subtotalRow;
-        const isGrand = r === grandRow;
-        const fillColor = isHeader ? (headerFills[br.label]||'E2E8F0') :
-                          isSubtotal ? 'F1F5F9' :
-                          isGrand ? 'E2E8F0' : 'FFFFFF';
-        ws[cellAddr].s = {
-          border,
-          fill: { patternType:'solid', fgColor:{rgb: fillColor} },
-          font: { bold: isHeader || isSubtotal || isGrand, sz: isGrand ? 11 : 10 },
-          alignment: { horizontal: cc===0 ? 'left' : 'right', vertical:'center' },
-        };
-      }
-    });
-  }
-
-  XLSX.utils.book_append_sheet(wb, ws, '百貨在庫總覽');
-  XLSX.writeFile(wb, `DASKA_百貨在庫_${d}.xlsx`, {cellStyles:true});
-  hideSyncOverlay();
-  window.toast('Excel エクスポート完了！');
-};
-
-window.exportECXLSX=async function(){
-  const d=document.getElementById('ecMainDateInput').value;
-  if(!d){ alert('先に日付を選択してください'); return; }
-  showSyncOverlay('Excel 出力中...');
-
-  // ── EC在庫の stockMap を算出（renderECDashInto と同ロジック） ──
-  const chStock=await getChannelStock('EC',d);
-  const useChannelStock=Object.keys(chStock).length>0;
-  try{ const snap=await get(ref(db,'transferHistory')); transferCache=snap.val()||{}; }catch(e){}
-  const ecStocktakeDate=useChannelStock?await getChannelStockDate('EC',d):'0000-00-00';
-  let stockMap={};
-  CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>{
-    const chItem=chStock[item]||{boxes:0,loose:0,deptBoxes:0};
-    let boxes=useChannelStock?chItem.boxes:0;
-    let loose=useChannelStock?chItem.loose:0;
-    const p=priceMap[item]||{};
-    const ecBoxQty2=p.ecQty||p.qty||1;
-    Object.keys(transferCache).filter(date=>date>=ecStocktakeDate&&date<=d).sort().forEach(date=>{
-      (transferCache[date]||[]).forEach(t=>{
-        if(t.item!==item) return;
-        const units=t.units||(t.boxes||0)*ecBoxQty2;
-        if(t.from==='EC'){
-          const totalUnits=boxes*ecBoxQty2+loose-units;
-          if(totalUnits<=0){ boxes=0; loose=0; }
-          else { boxes=Math.floor(totalUnits/ecBoxQty2); loose=totalUnits%ecBoxQty2; }
-        }
-        if(t.to==='EC'&&t.from!=='VT百貨'){
-          const totalUnits=boxes*ecBoxQty2+loose+units;
-          boxes=Math.floor(totalUnits/ecBoxQty2); loose=totalUnits%ecBoxQty2;
-        }
-      });
-    });
-    stockMap[item]={boxes,loose};
-  }));
-
-  // EC在庫はパンフ/試食/ITA10/T10/T10SP/限定を除外（画面表示と同じ）
-  const ecBrandsConfig=CP_BRANDS_CONFIG.filter(b=>b.id!=='限定')
-    .map(b=>({...b, items:b.items.filter(it=>!it.endsWith('パンフ')&&!it.endsWith('試食')&&!['ITA10','T10','T10SP'].includes(it))}));
-
-  // ── 動態載入 SheetJS ──
-  if(!window.XLSX){
-    await new Promise((res,rej)=>{
-      const s=document.createElement('script');
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-      s.onload=res; s.onerror=rej;
-      document.head.appendChild(s);
-    });
-  }
-  const XLSX=window.XLSX;
-  const wb=XLSX.utils.book_new();
-
-  const COL_W = 5;
-  const GAP   = 1;
-  const BLOCK = COL_W + GAP;
-
-  const brStarts = ecBrandsConfig.map((_,i) => i * BLOCK);
-  const maxItems = Math.max(...ecBrandsConfig.map(br=>br.items.length));
-
-  const HEADER_ROWS = 3;
-  const FOOTER_ROWS = 3;
-  const totalRows   = HEADER_ROWS + maxItems + FOOTER_ROWS;
-  const totalCols   = ecBrandsConfig.length * BLOCK;
-
-  const grid = Array.from({length:totalRows}, ()=>Array(totalCols).fill(''));
-
-  grid[0][0] = `DASKA EC在庫總覽　計算日：${d}`;
-
-  ecBrandsConfig.forEach((br,bi)=>{
-    const c = brStarts[bi];
-    grid[2][c]   = `${br.label} 品目`;
-    grid[2][c+1] = '箱数';
-    grid[2][c+2] = '個数';
-    grid[2][c+3] = '単価';
-    grid[2][c+4] = '金額';
-  });
-
-  ecBrandsConfig.forEach((br,bi)=>{
-    const c = brStarts[bi];
-    br.items.forEach((item,ii)=>{
-      const v = stockMap[item]||{boxes:0,loose:0};
-      const p = priceMap[item]||{};
-      const qty = p.ecQty||p.qty||0;
-      const price = p.price||0;
-      const totalUnits = v.boxes*qty + (v.loose||0);
-      const val = qty>0&&price>0 ? totalUnits*price : '';
-      grid[HEADER_ROWS+ii][c]   = item;
-      grid[HEADER_ROWS+ii][c+1] = v.boxes||0;
-      grid[HEADER_ROWS+ii][c+2] = qty||'';
-      grid[HEADER_ROWS+ii][c+3] = price||'';
-      grid[HEADER_ROWS+ii][c+4] = val;
-    });
-  });
-
-  const subtotalRow = HEADER_ROWS + maxItems + 1;
-  let grandBoxes = 0, grandValue = 0;
-  ecBrandsConfig.forEach((br,bi)=>{
-    const c = brStarts[bi];
-    const brBoxes = br.items.reduce((s,item)=>s+(stockMap[item]||{boxes:0}).boxes,0);
-    const brVal   = br.items.reduce((s,item)=>{
-      const v=stockMap[item]||{boxes:0,loose:0};
-      const p=priceMap[item]||{};
-      const qty=p.ecQty||p.qty||0;
-      if(!qty||!p.price) return s;
-      return s+(v.boxes*qty+(v.loose||0))*p.price;
-    },0);
-    grandBoxes += brBoxes;
-    grandValue += brVal;
-    grid[subtotalRow][c]   = `${br.label} 小計`;
-    grid[subtotalRow][c+1] = brBoxes;
-    grid[subtotalRow][c+4] = brVal||'';
-  });
-
-  const grandRow = subtotalRow + 1;
-  grid[grandRow][0] = '全ブランド合計';
-  grid[grandRow][1] = grandBoxes;
-  grid[grandRow][4] = grandValue||'';
-
-  const ws = XLSX.utils.aoa_to_sheet(grid);
-
-  const colWidths = [];
-  ecBrandsConfig.forEach(br=>{
-    const maxLen = Math.max(...br.items.map(s=>s.length), br.label.length+4);
-    colWidths.push({wch: Math.max(maxLen, 14)});
-    colWidths.push({wch: 7});
-    colWidths.push({wch: 7});
-    colWidths.push({wch: 8});
-    colWidths.push({wch: 12});
-    colWidths.push({wch: 2});
-  });
-  ws['!cols'] = colWidths;
-
-  const border = {
-    top:    {style:'thin', color:{rgb:'AAAAAA'}},
-    bottom: {style:'thin', color:{rgb:'AAAAAA'}},
-    left:   {style:'thin', color:{rgb:'AAAAAA'}},
-    right:  {style:'thin', color:{rgb:'AAAAAA'}},
-  };
-  const headerFills = {
-    'DES':  'F5D0D0', 'LF': 'FAE5C0', 'LE': 'D0EDD8', 'YT': 'D0DCF5', '限定': 'E8D0F5', 'チーズ': 'FFF8E1'
-  };
-
-  for(let r=2; r<totalRows; r++){
-    ecBrandsConfig.forEach((br, bi)=>{
-      const cStart = brStarts[bi];
-      for(let cc=0; cc<COL_W; cc++){
-        const col = cStart + cc;
-        const cellAddr = XLSX.utils.encode_cell({r, c: col});
-        if(!ws[cellAddr]) ws[cellAddr] = {v:'', t:'s'};
-        const isHeader = r === 2;
-        const isSubtotal = r === subtotalRow;
-        const isGrand = r === grandRow;
-        const fillColor = isHeader ? (headerFills[br.label]||'E2E8F0') :
-                          isSubtotal ? 'F1F5F9' :
-                          isGrand ? 'E2E8F0' : 'FFFFFF';
-        ws[cellAddr].s = {
-          border,
-          fill: { patternType:'solid', fgColor:{rgb: fillColor} },
-          font: { bold: isHeader || isSubtotal || isGrand, sz: isGrand ? 11 : 10 },
-          alignment: { horizontal: cc===0 ? 'left' : 'right', vertical:'center' },
-        };
-      }
-    });
-  }
-
-  XLSX.utils.book_append_sheet(wb, ws, 'EC在庫總覽');
-  XLSX.writeFile(wb, `DASKA_EC在庫_${d}.xlsx`, {cellStyles:true});
-  hideSyncOverlay();
-  window.toast('Excel エクスポート完了！');
-};
-
 // ════════════════════════════════
 // 訪客モード
 // ════════════════════════════════
 async function startGuestApp(){
   const today=new Date().toISOString().slice(0,10);
   document.getElementById('guestDateInput').value=today;
-  document.getElementById('guestAnalyticsDateInput').value=today;
   onValue(ref(db,'.info/connected'),snap=>{
     const on=snap.val()===true;
     const badge=document.getElementById('guestSyncBadge');
@@ -2111,7 +1778,6 @@ async function startGuestApp(){
     document.getElementById('guestSyncBadgeText').textContent=on?'リアルタイム同期中':'オフライン';
   });
   await loadPriceSettings();
-  renderGuestAnalytics();
   // 監聽資料更新時自動刷新訪客畫面
   let guestInDebounce = null, guestCpDebounce = null;
   onValue(ref(db,'inHistory'),snap=>{
@@ -2322,7 +1988,7 @@ window.toggleGuestChannelUnit=function(ch){
 };
 
 window.switchGuestTab=function(tab){
-  const tabs=['analytics','dept','ec','current','web','kaitori','variant'];
+  const tabs=['current','dept','ec','web','kaitori','variant'];
   tabs.forEach((t,i)=>{
     const btn=document.getElementById('guestTab'+(i+1));
     if(btn) btn.classList.toggle('active',t===tab);
@@ -2356,11 +2022,6 @@ window.switchGuestTab=function(tab){
     if(!el.value) el.value=today;
     renderGuestChannelDash('kaitori','買取');
   }
-  if(tab==='analytics'){
-    const el=document.getElementById('guestAnalyticsDateInput');
-    if(!el.value) el.value=document.getElementById('guestDateInput').value||today;
-    renderGuestAnalytics();
-  }
 };
 
 window.renderGuestChannelDash=async function(tabId, channelKey){
@@ -2378,10 +2039,7 @@ window.renderGuestChannelDash=async function(tabId, channelKey){
   let totalBoxes=0,totalItems=0,totalValue=0;
   const grid=document.getElementById('guest'+tabId.charAt(0).toUpperCase()+tabId.slice(1)+'Grid');
   grid.innerHTML='';
-  const guestBrandsConfig=channelKey==='EC'
-    ?CP_BRANDS_CONFIG.filter(b=>b.id!=='限定').map(b=>({...b, items:b.items.filter(it=>!it.endsWith('パンフ')&&!it.endsWith('試食')&&!['ITA10','T10','T10SP'].includes(it))}))
-    :CP_BRANDS_CONFIG;
-  guestBrandsConfig.forEach(br=>{
+  CP_BRANDS_CONFIG.forEach(br=>{
     const card=document.createElement('div'); card.className='brand-card';
     let brVal=0;
     const rows=br.items.map(item=>{
@@ -3078,48 +2736,26 @@ window.renderAnalytics=async function(){
   const chLabels={'VT百貨':'🏬 百貨','EC':'🛒 EC','WEB':'🌐 WEB','買取':'🛍 買取'};
   const chBgColors={'VT百貨':'#3B82F6','EC':'#10B981','WEB':'#F59E0B','買取':'#8B5CF6'};
   channels.forEach(ch=>{ channelData[ch]={boxes:0,value:0}; });
-  CP_BRANDS_CONFIG.forEach(br=>{ brandData[br.label]={boxes:0,value:0,cls:br.cls,ch:{'VT百貨':{boxes:0,value:0},'EC':{boxes:0,value:0},'WEB':{boxes:0,value:0},'買取':{boxes:0,value:0}}}; });
+  CP_BRANDS_CONFIG.forEach(br=>{ brandData[br.label]={boxes:0,value:0,cls:br.cls}; });
 
   CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>{
     const p=priceMap[item]||{};
-    const ecBoxQty=p.ecQty||p.qty||0;
-    const deptBoxQty=p.qty||0;
-    const price=p.price||0;
-
-    // EC通路の生データ（自社EC箱数・バラ・EC倉に紐づく百貨分の箱数）
-    const ecItem=chStocks['EC'][item]||null;
-    const ecHasStock=ecItem&&((ecItem.boxes||0)>0||(ecItem.deptBoxes||0)>0||(ecItem.loose||0)>0);
-    let ecOwnBoxes,ecLoose,ecDeptBoxes;
-    if(ecHasStock){
-      ecOwnBoxes=ecItem.boxes||0; ecLoose=ecItem.loose||0; ecDeptBoxes=ecItem.deptBoxes||0;
-    } else {
-      ecOwnBoxes=distMap[item]?.EC?.boxes||0; ecLoose=0;
-      ecDeptBoxes=distMap[item]?.EC?.deptBoxes||0;
-    }
-
-    // 百貨通路の生データ（自社百貨箱数）＋ EC倉に紐づく百貨分
-    const deptItem=chStocks['VT百貨'][item]||null;
-    const deptOwnBoxes=(deptItem&&(deptItem.boxes||0)>0)?(deptItem.boxes||0):(distMap[item]?.['VT百貨']?.boxes||0);
-    const deptTotalBoxes=deptOwnBoxes+ecDeptBoxes;
-    const deptVal=deptTotalBoxes*deptBoxQty*price;
-    channelData['VT百貨'].boxes+=deptTotalBoxes; channelData['VT百貨'].value+=deptVal;
-    brandData[br.label].boxes+=deptTotalBoxes; brandData[br.label].value+=deptVal;
-    brandData[br.label].ch['VT百貨'].boxes+=deptTotalBoxes; brandData[br.label].ch['VT百貨'].value+=deptVal;
-
-    // EC通路（百貨分を除いた純粋なEC在庫のみ）
-    const ecVal=ecOwnBoxes*ecBoxQty*price+ecLoose*price;
-    channelData['EC'].boxes+=ecOwnBoxes; channelData['EC'].value+=ecVal;
-    brandData[br.label].boxes+=ecOwnBoxes; brandData[br.label].value+=ecVal;
-    brandData[br.label].ch['EC'].boxes+=ecOwnBoxes; brandData[br.label].ch['EC'].value+=ecVal;
-
-    // WEB・買取（変更なし）
-    ['WEB','買取'].forEach(ch=>{
+    channels.forEach(ch=>{
       const chItem=chStocks[ch][item]||null;
-      const boxes=(chItem&&(chItem.boxes||0)>0)?(chItem.boxes||0):(distMap[item]?.[ch]?.boxes||0);
-      const val=boxes*deptBoxQty*price;
-      channelData[ch].boxes+=boxes; channelData[ch].value+=val;
-      brandData[br.label].boxes+=boxes; brandData[br.label].value+=val;
-      brandData[br.label].ch[ch].boxes+=boxes; brandData[br.label].ch[ch].value+=val;
+      const hasStock=chItem&&((chItem.boxes||0)>0||(chItem.deptBoxes||0)>0);
+      let boxes=0;
+      if(hasStock){
+        boxes=(chItem.boxes||0)+(ch==='EC'?chItem.deptBoxes||0:0);
+      } else {
+        boxes=distMap[item]?.[ch==='VT百貨'?'VT百貨':ch]?.boxes||0;
+        if(ch==='EC') boxes+=distMap[item]?.EC?.deptBoxes||0;
+      }
+      const boxQty=ch==='EC'?(p.ecQty||p.qty||0):(p.qty||0);
+      const val=boxes*boxQty*(p.price||0);
+      channelData[ch].boxes+=boxes;
+      channelData[ch].value+=val;
+      brandData[br.label].boxes+=boxes;
+      brandData[br.label].value+=val;
     });
   }));
 
@@ -3138,20 +2774,12 @@ window.renderAnalytics=async function(){
       label:chLabels[ch], value:channelData[ch].boxes, color:chBgColors[ch]
     })), totalBoxes, '箱');
 
-  // 円グラフ（百貨ブランド）
+  // 円グラフ（ブランド）
   const brandColors={'DES':'#E53E3E','LF':'#DD6B20','LE':'#38A169','YT':'#3182CE','限定':'#805AD5','チーズ':'#D69E2E'};
-  const deptBrandTotal=Object.values(brandData).reduce((s,v)=>s+v.ch['VT百貨'].boxes,0);
-  drawPieChart('deptBrandPieChart', 'deptBrandLegend',
-    Object.entries(brandData).filter(([,v])=>v.ch['VT百貨'].boxes>0).map(([label,v])=>({
-      label, value:v.ch['VT百貨'].boxes, color:brandColors[label]||'#94A3B8'
-    })), deptBrandTotal, '箱');
-
-  // 円グラフ（ECブランド）
-  const ecBrandTotal=Object.values(brandData).reduce((s,v)=>s+v.ch['EC'].boxes,0);
-  drawPieChart('ecBrandPieChart', 'ecBrandLegend',
-    Object.entries(brandData).filter(([,v])=>v.ch['EC'].boxes>0).map(([label,v])=>({
-      label, value:v.ch['EC'].boxes, color:brandColors[label]||'#94A3B8'
-    })), ecBrandTotal, '箱');
+  drawPieChart('brandPieChart', 'brandLegend',
+    Object.entries(brandData).filter(([,v])=>v.boxes>0).map(([label,v])=>({
+      label, value:v.boxes, color:brandColors[label]||'#94A3B8'
+    })), totalBoxes, '箱');
 
   // 通路別金額バー
   const maxChVal=Math.max(...channels.map(ch=>channelData[ch].value),1);
@@ -3171,175 +2799,22 @@ window.renderAnalytics=async function(){
     </div>`;
   }).join('');
 
-  // ブランド別金額バー（通路別の内訳・合計付き）
-  const chOrder=['VT百貨','EC','WEB','買取'];
+  // ブランド別金額バー
   const maxBrVal=Math.max(...Object.values(brandData).map(v=>v.value),1);
   document.getElementById('brandValueBars').innerHTML=Object.entries(brandData).map(([label,v])=>{
     const pct=Math.round(v.value/maxBrVal*100);
     const sharePct=totalValue>0?Math.round(v.value/totalValue*100):0;
-    const segHtml=chOrder.map(ch=>{
-      const segShare=v.value>0?(v.ch[ch].value/v.value*100):0;
-      return segShare>0?`<div style="height:100%;width:${segShare}%;background:${chBgColors[ch]};" title="${chLabels[ch]} ¥${v.ch[ch].value.toLocaleString()}"></div>`:'';
-    }).join('');
-    const breakdown=chOrder.filter(ch=>v.ch[ch].value>0).map(ch=>
-      `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;margin-bottom:2px;">
-        <span style="width:8px;height:8px;border-radius:2px;background:${chBgColors[ch]};display:inline-block;flex-shrink:0;"></span>
-        ${chLabels[ch]} ¥${v.ch[ch].value.toLocaleString()}（${v.ch[ch].boxes}箱）
-      </span>`
-    ).join('');
-    return `<div style="margin-bottom:18px;">
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-        <span style="font-weight:600;">${label}</span>
-        <span>合計 ¥${v.value.toLocaleString()} <span style="color:var(--text-secondary);font-size:11px;">(${sharePct}%)</span></span>
-      </div>
-      <div style="background:#F1F5F9;border-radius:6px;height:24px;overflow:hidden;">
-        <div style="display:flex;height:100%;width:${pct}%;">${segHtml}</div>
-      </div>
-      <div style="margin-top:6px;font-size:11px;color:var(--text-secondary);display:flex;flex-wrap:wrap;">${breakdown}</div>
-    </div>`;
-  }).join('');
-};
-
-window.renderGuestAnalytics=async function(){
-  const d=document.getElementById('guestAnalyticsDateInput').value;
-  if(!d) return;
-
-  // 各通路のデータを取得
-  const channels=['VT百貨','EC','WEB','買取'];
-  const chStocks={};
-  await Promise.all(channels.map(async ch=>{
-    const s=await getChannelStock(ch,d);
-    chStocks[ch]=s;
-  }));
-
-  try{ const snap=await get(ref(db,'distHistory')); distCache=snap.val()||{}; }catch(e){}
-  try{ const snap2=await get(ref(db,'transferHistory')); transferCache=snap2.val()||{}; }catch(e){}
-  const distMap=calcDistMapWithTransfer(d);
-
-  // 通路別・品牌別の箱数と金額を集計
-  const channelData={};
-  const brandData={};
-  const chLabels={'VT百貨':'🏬 百貨','EC':'🛒 EC','WEB':'🌐 WEB','買取':'🛍 買取'};
-  const chBgColors={'VT百貨':'#3B82F6','EC':'#10B981','WEB':'#F59E0B','買取':'#8B5CF6'};
-  channels.forEach(ch=>{ channelData[ch]={boxes:0,value:0}; });
-  CP_BRANDS_CONFIG.forEach(br=>{ brandData[br.label]={boxes:0,value:0,cls:br.cls,ch:{'VT百貨':{boxes:0,value:0},'EC':{boxes:0,value:0},'WEB':{boxes:0,value:0},'買取':{boxes:0,value:0}}}; });
-
-  CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>{
-    const p=priceMap[item]||{};
-    const ecBoxQty=p.ecQty||p.qty||0;
-    const deptBoxQty=p.qty||0;
-    const price=p.price||0;
-
-    // EC通路の生データ（自社EC箱数・バラ・EC倉に紐づく百貨分の箱数）
-    const ecItem=chStocks['EC'][item]||null;
-    const ecHasStock=ecItem&&((ecItem.boxes||0)>0||(ecItem.deptBoxes||0)>0||(ecItem.loose||0)>0);
-    let ecOwnBoxes,ecLoose,ecDeptBoxes;
-    if(ecHasStock){
-      ecOwnBoxes=ecItem.boxes||0; ecLoose=ecItem.loose||0; ecDeptBoxes=ecItem.deptBoxes||0;
-    } else {
-      ecOwnBoxes=distMap[item]?.EC?.boxes||0; ecLoose=0;
-      ecDeptBoxes=distMap[item]?.EC?.deptBoxes||0;
-    }
-
-    // 百貨通路の生データ（自社百貨箱数）＋ EC倉に紐づく百貨分
-    const deptItem=chStocks['VT百貨'][item]||null;
-    const deptOwnBoxes=(deptItem&&(deptItem.boxes||0)>0)?(deptItem.boxes||0):(distMap[item]?.['VT百貨']?.boxes||0);
-    const deptTotalBoxes=deptOwnBoxes+ecDeptBoxes;
-    const deptVal=deptTotalBoxes*deptBoxQty*price;
-    channelData['VT百貨'].boxes+=deptTotalBoxes; channelData['VT百貨'].value+=deptVal;
-    brandData[br.label].boxes+=deptTotalBoxes; brandData[br.label].value+=deptVal;
-    brandData[br.label].ch['VT百貨'].boxes+=deptTotalBoxes; brandData[br.label].ch['VT百貨'].value+=deptVal;
-
-    // EC通路（百貨分を除いた純粋なEC在庫のみ）
-    const ecVal=ecOwnBoxes*ecBoxQty*price+ecLoose*price;
-    channelData['EC'].boxes+=ecOwnBoxes; channelData['EC'].value+=ecVal;
-    brandData[br.label].boxes+=ecOwnBoxes; brandData[br.label].value+=ecVal;
-    brandData[br.label].ch['EC'].boxes+=ecOwnBoxes; brandData[br.label].ch['EC'].value+=ecVal;
-
-    // WEB・買取（変更なし）
-    ['WEB','買取'].forEach(ch=>{
-      const chItem=chStocks[ch][item]||null;
-      const boxes=(chItem&&(chItem.boxes||0)>0)?(chItem.boxes||0):(distMap[item]?.[ch]?.boxes||0);
-      const val=boxes*deptBoxQty*price;
-      channelData[ch].boxes+=boxes; channelData[ch].value+=val;
-      brandData[br.label].boxes+=boxes; brandData[br.label].value+=val;
-      brandData[br.label].ch[ch].boxes+=boxes; brandData[br.label].ch[ch].value+=val;
-    });
-  }));
-
-  const totalBoxes=Object.values(channelData).reduce((s,v)=>s+v.boxes,0);
-  const totalValue=Object.values(channelData).reduce((s,v)=>s+v.value,0);
-
-  // サマリー
-  document.getElementById('guestAnalyticsSummary').innerHTML=`
-    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">総在庫箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
-    <div class="stat" style="background:#FFF8E1;border-color:#FFD54F"><div class="stat-l" style="color:#E65100">総在庫金額</div><div class="stat-v" style="color:#BF360C;">¥${totalValue.toLocaleString()}</div></div>
-    <div class="stat"><div class="stat-l">計算日</div><div class="stat-v" style="font-size:15px;">${d}</div></div>`;
-
-  // 円グラフ（通路）
-  drawPieChart('guestChannelPieChart', 'guestChannelLegend',
-    channels.filter(ch=>channelData[ch].boxes>0).map(ch=>({
-      label:chLabels[ch], value:channelData[ch].boxes, color:chBgColors[ch]
-    })), totalBoxes, '箱');
-
-  // 円グラフ（百貨ブランド）
-  const brandColors={'DES':'#E53E3E','LF':'#DD6B20','LE':'#38A169','YT':'#3182CE','限定':'#805AD5','チーズ':'#D69E2E'};
-  const guestDeptBrandTotal=Object.values(brandData).reduce((s,v)=>s+v.ch['VT百貨'].boxes,0);
-  drawPieChart('guestDeptBrandPieChart', 'guestDeptBrandLegend',
-    Object.entries(brandData).filter(([,v])=>v.ch['VT百貨'].boxes>0).map(([label,v])=>({
-      label, value:v.ch['VT百貨'].boxes, color:brandColors[label]||'#94A3B8'
-    })), guestDeptBrandTotal, '箱');
-
-  // 円グラフ（ECブランド）
-  const guestEcBrandTotal=Object.values(brandData).reduce((s,v)=>s+v.ch['EC'].boxes,0);
-  drawPieChart('guestEcBrandPieChart', 'guestEcBrandLegend',
-    Object.entries(brandData).filter(([,v])=>v.ch['EC'].boxes>0).map(([label,v])=>({
-      label, value:v.ch['EC'].boxes, color:brandColors[label]||'#94A3B8'
-    })), guestEcBrandTotal, '箱');
-
-  // 通路別金額バー
-  const maxChVal=Math.max(...channels.map(ch=>channelData[ch].value),1);
-  document.getElementById('guestChannelValueBars').innerHTML=channels.map(ch=>{
-    const pct=Math.round(channelData[ch].value/maxChVal*100);
-    const sharePct=totalValue>0?Math.round(channelData[ch].value/totalValue*100):0;
+    const color=brandColors[label]||'#94A3B8';
     return `<div style="margin-bottom:14px;">
       <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-        <span style="font-weight:600;">${chLabels[ch]}</span>
-        <span>¥${channelData[ch].value.toLocaleString()} <span style="color:var(--text-secondary);font-size:11px;">(${sharePct}%)</span></span>
+        <span style="font-weight:600;">${label}</span>
+        <span>¥${v.value.toLocaleString()} <span style="color:var(--text-secondary);font-size:11px;">(${sharePct}%)</span></span>
       </div>
       <div style="background:#F1F5F9;border-radius:6px;height:28px;overflow:hidden;">
-        <div style="height:100%;width:${pct}%;background:${chBgColors[ch]};border-radius:6px;transition:width 0.5s;display:flex;align-items:center;padding-left:8px;">
-          ${pct>15?`<span style="font-size:11px;color:#fff;font-weight:700;">${channelData[ch].boxes}箱</span>`:''}
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:6px;transition:width 0.5s;display:flex;align-items:center;padding-left:8px;">
+          ${pct>15?`<span style="font-size:11px;color:#fff;font-weight:700;">${v.boxes}箱</span>`:''}
         </div>
       </div>
-    </div>`;
-  }).join('');
-
-  // ブランド別金額バー（通路別の内訳・合計付き）
-  const chOrder=['VT百貨','EC','WEB','買取'];
-  const maxBrVal=Math.max(...Object.values(brandData).map(v=>v.value),1);
-  document.getElementById('guestBrandValueBars').innerHTML=Object.entries(brandData).map(([label,v])=>{
-    const pct=Math.round(v.value/maxBrVal*100);
-    const sharePct=totalValue>0?Math.round(v.value/totalValue*100):0;
-    const segHtml=chOrder.map(ch=>{
-      const segShare=v.value>0?(v.ch[ch].value/v.value*100):0;
-      return segShare>0?`<div style="height:100%;width:${segShare}%;background:${chBgColors[ch]};" title="${chLabels[ch]} ¥${v.ch[ch].value.toLocaleString()}"></div>`:'';
-    }).join('');
-    const breakdown=chOrder.filter(ch=>v.ch[ch].value>0).map(ch=>
-      `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;margin-bottom:2px;">
-        <span style="width:8px;height:8px;border-radius:2px;background:${chBgColors[ch]};display:inline-block;flex-shrink:0;"></span>
-        ${chLabels[ch]} ¥${v.ch[ch].value.toLocaleString()}（${v.ch[ch].boxes}箱）
-      </span>`
-    ).join('');
-    return `<div style="margin-bottom:18px;">
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-        <span style="font-weight:600;">${label}</span>
-        <span>合計 ¥${v.value.toLocaleString()} <span style="color:var(--text-secondary);font-size:11px;">(${sharePct}%)</span></span>
-      </div>
-      <div style="background:#F1F5F9;border-radius:6px;height:24px;overflow:hidden;">
-        <div style="display:flex;height:100%;width:${pct}%;">${segHtml}</div>
-      </div>
-      <div style="margin-top:6px;font-size:11px;color:var(--text-secondary);display:flex;flex-wrap:wrap;">${breakdown}</div>
     </div>`;
   }).join('');
 };
@@ -3483,18 +2958,24 @@ let transferCache = {};
 let pendingTransfers = []; // 未保存の調貨リスト
 
 window.switchDistSubTab = function(tab){
-  const today=new Date().toISOString().slice(0,10);
-  if(!document.getElementById('transferDateInput').value) document.getElementById('transferDateInput').value=today;
-  // 品目リストを更新
-  const sel=document.getElementById('transferItem');
-  sel.innerHTML='<option value="">品目を選択...</option>';
-  CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>{
-    const opt=document.createElement('option');
-    opt.value=item; opt.textContent=item;
-    sel.appendChild(opt);
-  }));
-  renderTransferHistory();
-  renderPendingTransfers();
+  document.getElementById('distSubTab1').classList.toggle('active', tab==='init');
+  document.getElementById('distSubTab2').classList.toggle('active', tab==='transfer');
+  document.getElementById('dist-init').style.display = tab==='init' ? '' : 'none';
+  document.getElementById('dist-transfer').style.display = tab==='transfer' ? '' : 'none';
+  if(tab==='transfer'){
+    const today=new Date().toISOString().slice(0,10);
+    if(!document.getElementById('transferDateInput').value) document.getElementById('transferDateInput').value=today;
+    // 品目リストを更新
+    const sel=document.getElementById('transferItem');
+    sel.innerHTML='<option value="">品目を選択...</option>';
+    CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>{
+      const opt=document.createElement('option');
+      opt.value=item; opt.textContent=item;
+      sel.appendChild(opt);
+    }));
+    renderTransferHistory();
+    renderPendingTransfers();
+  }
 };
 
 let transferInputMode = 'units'; // 'units' or 'boxes'
@@ -3516,8 +2997,8 @@ function updateTransferPreview(){
   const preview = document.getElementById('transferConvertPreview');
   if(!preview||!item||val<=0) { if(preview) preview.textContent=''; return; }
   const p = priceMap[item]||{};
-  const fromBoxQty = from==='EC'?Math.max(1,p.ecQty||p.qty||1):Math.max(1,p.qty||1);
-  const toBoxQty = to==='EC'?Math.max(1,p.ecQty||p.qty||1):Math.max(1,p.qty||1);
+  const fromBoxQty = from==='EC'?(p.ecQty||p.qty||1):(p.qty||1);
+  const toBoxQty = to==='EC'?(p.ecQty||p.qty||1):(p.qty||1);
   let units;
   if(transferInputMode==='boxes'){
     units = val * fromBoxQty;
@@ -3547,88 +3028,48 @@ window.addTransferRow = function(){
   if(inputVal<=0){ alert(transferInputMode==='units'?'個数を入力してください':'箱数を入力してください'); return; }
 
   const p = priceMap[item]||{};
-  const deptBoxQty = Math.max(1, p.qty||1);
-  const ecBoxQty = Math.max(1, p.ecQty||p.qty||1);
-  const fromBoxQty = from==='EC'?ecBoxQty:deptBoxQty;
+  const fromBoxQty = from==='EC'?(p.ecQty||p.qty||1):(p.qty||1);
+  const toBoxQty   = to==='EC'  ?(p.ecQty||p.qty||1):(p.qty||1);
   const units = transferInputMode==='boxes' ? inputVal * fromBoxQty : inputVal;
 
-  // EC側の在庫を取得（ecBoxes と deptBoxes を分けて追跡）
-  Promise.all([
-    get(ref(db,`channelStock/VT百貨`)),
-    get(ref(db,`channelStock/EC`)),
-    get(ref(db,`channelStock/WEB`)),
-    get(ref(db,`channelStock/買取`))
-  ]).then(([deptSnap,ecSnap,webSnap,kaitoriSnap])=>{
-    const allData={'VT百貨':deptSnap.val()||{},'EC':ecSnap.val()||{},'WEB':webSnap.val()||{},'買取':kaitoriSnap.val()||{}};
-
-    function getStocktakeDate(ch){
-      const dates=Object.keys(allData[ch]).filter(dt=>dt<=d).sort();
-      return dates.length>0?dates[dates.length-1]:'0000-00-00';
-    }
-    function getInitial(ch){
-      const stDate=getStocktakeDate(ch);
-      if(stDate==='0000-00-00') return {boxes:0,deptBoxes:0};
-      const raw=allData[ch][stDate]||{};
+  // 在庫チェック：FROM通路の現在庫存を計算
+  const fromChannel = from;
+  let currentBoxes = 0;
+  // channelStockから最新棚卸を取得
+  const chKey = from==='VT百貨'?'VT百貨':from;
+  get(ref(db,`channelStock/${chKey}`)).then(snap=>{
+    const data=snap.val()||{};
+    const dates=Object.keys(data).filter(dt=>dt<=d).sort();
+    let stocktakeDate='0000-00-00';
+    if(dates.length>0){
+      stocktakeDate=dates[dates.length-1];
+      const raw=data[stocktakeDate]||{};
       const val=raw[item];
-      if(typeof val==='object') return {boxes:val.boxes||0, deptBoxes:val.deptBoxes||0};
-      return {boxes:Number(val)||0, deptBoxes:0};
+      if(typeof val==='object') currentBoxes=(val.boxes||0)+(from==='EC'?val.deptBoxes||0:0);
+      else currentBoxes=Number(val)||0;
     }
-
-    // FROM の現在庫存を計算（EC は ecBoxes / deptBoxes 分離）
-    const stDate=getStocktakeDate(from);
-    let init=getInitial(from);
-    let ecBoxes=from==='EC'?init.boxes:0;
-    let ecDeptBoxes=from==='EC'?init.deptBoxes:0;
-    let otherBoxes=from!=='EC'?init.boxes:0;
-
-    function applyTransfer(t){
-      if(t.item!==item) return;
-      const tFromQty=t.from==='EC'?ecBoxQty:deptBoxQty;
-      const tUnits=t.units||(t.boxes||0)*tFromQty;
-      if(from==='EC'){
-        if(t.from==='VT百貨'&&t.to==='EC'){ ecDeptBoxes+=Math.floor(tUnits/deptBoxQty); }
-        else if(t.from==='EC'&&t.to==='VT百貨'){
-          // EC→百貨: 優先順位 deptBoxes→ecBoxes（個数ベース）
-          let remainUnits=tUnits;
-          const useDept=Math.min(ecDeptBoxes, Math.floor(remainUnits/deptBoxQty));
-          ecDeptBoxes-=useDept; remainUnits-=useDept*deptBoxQty;
-          const useEc=Math.ceil(remainUnits/ecBoxQty);
-          ecBoxes=Math.max(0,ecBoxes-useEc);
-        }
-        else if(t.from==='EC'){ ecBoxes=Math.max(0,ecBoxes-Math.floor(tUnits/ecBoxQty)); }
-        else if(t.to==='EC'){ ecBoxes+=Math.floor(tUnits/ecBoxQty); }
-      } else {
-        if(t.from===from) otherBoxes=Math.max(0,otherBoxes-Math.floor(tUnits/tFromQty));
-        if(t.to===from) otherBoxes+=Math.floor(tUnits/(from==='EC'?ecBoxQty:deptBoxQty));
-      }
-    }
-    Object.keys(transferCache).filter(date=>date>=stDate&&date<=d).sort().forEach(date=>{
-      (transferCache[date]||[]).forEach(applyTransfer);
+    // 棚卸後の調貨を適用
+    Object.keys(transferCache).filter(date=>date>=stocktakeDate&&date<=d).sort().forEach(date=>{
+      (transferCache[date]||[]).forEach(t=>{
+        if(t.item!==item) return;
+        const tUnits=t.units||(t.boxes||0)*fromBoxQty;
+        if(t.from===from) currentBoxes=Math.max(0,currentBoxes-Math.floor(tUnits/fromBoxQty));
+        if(t.to===from) currentBoxes+=Math.floor(tUnits/fromBoxQty);
+      });
     });
-    pendingTransfers.forEach(applyTransfer);
+    // 未保存の pending も含める
+    pendingTransfers.forEach(t=>{
+      if(t.item!==item) return;
+      if(t.from===from) currentBoxes=Math.max(0,currentBoxes-t.fromBoxes);
+      if(t.to===from) currentBoxes+=t.toBoxes;
+    });
 
-    // 必要箱数チェック
-    let ok=false, detail='';
-    if(from==='EC'){
-      // EC→他通路の場合: deptBoxes優先で個数を引く、足りなければecBoxesから
-      let remainUnits=units;
-      const useDept=Math.min(ecDeptBoxes, Math.floor(remainUnits/deptBoxQty));
-      remainUnits-=useDept*deptBoxQty;
-      const useEcBoxes=Math.ceil(remainUnits/ecBoxQty);
-      ok = useEcBoxes<=ecBoxes;
-      detail=`EC現在庫：百貨箱${ecDeptBoxes}箱 + EC箱${ecBoxes}箱\n必要：百貨箱${useDept}箱を使用後、EC箱${useEcBoxes}箱が必要`;
-    } else {
-      const needBoxes=Math.ceil(units/fromBoxQty);
-      ok = needBoxes<=otherBoxes;
-      detail=`${from} 現在庫存：${otherBoxes}箱\n必要箱数：${needBoxes}箱`;
-    }
-
-    if(!ok){
-      alert(`在庫不足！\n${detail}`);
+    const needBoxes = Math.ceil(units/fromBoxQty);
+    if(currentBoxes < needBoxes){
+      alert(`在庫不足！\n${from} の現在庫存：${currentBoxes}箱\n必要箱数：${needBoxes}箱`);
       return;
     }
 
-    const toBoxQty = to==='EC'?ecBoxQty:deptBoxQty;
     const fromBoxes  = Math.floor(units/fromBoxQty);
     const fromLoose  = units % fromBoxQty;
     const toBoxes    = Math.floor(units/toBoxQty);
@@ -3719,28 +3160,16 @@ async function renderTransferHistory(){
   if(dates.length===0){ el.innerHTML='<div style="color:var(--text-secondary);font-size:13px;padding:20px;text-align:center;">調貨履歴がありません</div>'; return; }
   el.innerHTML=dates.map(date=>{
     const records=transferCache[date]||[];
-    const rows=records.map((t,i)=>{
-      const p=priceMap[t.item]||{};
-      const fromBoxQty=t.from==='EC'?(p.ecQty||p.qty||1):(p.qty||1);
-      const toBoxQty=t.to==='EC'?(p.ecQty||p.qty||1):(p.qty||1);
-      const units=t.units||(t.boxes||0)*fromBoxQty;
-      const fromBoxes=t.fromBoxes??Math.floor(units/fromBoxQty);
-      const fromLoose=t.fromLoose??(units%fromBoxQty);
-      const toBoxes=t.toBoxes??Math.floor(units/toBoxQty);
-      const toLoose=t.toLoose??(units%toBoxQty);
-      return `
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid #F1F5F9;font-size:13px;flex-wrap:wrap;">
+    const rows=records.map((t,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid #F1F5F9;font-size:13px;">
         <span style="font-weight:600;min-width:80px;">${t.item}</span>
         <span style="color:#E53E3E;font-weight:700;">${t.from}</span>
-        <span style="font-size:11px;color:var(--text-secondary);">-${fromBoxes}箱${fromLoose>0?` ${fromLoose}個`:''}</span>
         <span>→</span>
         <span style="color:#27500A;font-weight:700;">${t.to}</span>
-        <span style="font-size:11px;color:var(--text-secondary);">+${toBoxes}箱${toLoose>0?` ${toLoose}個`:''}</span>
-        <span style="font-weight:700;color:var(--blue-dark);">(${units}個)</span>
+        <span style="font-weight:700;">${t.units?t.units+'個':t.boxes+'箱'}</span>
         ${t.note?`<span style="color:var(--text-secondary);">(${t.note})</span>`:''}
         <button onclick="deleteTransfer('${date}',${i})" style="margin-left:auto;background:#FFF5F5;border:1px solid #FCA5A5;color:#E53E3E;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px;">🗑 削除</button>
-      </div>`;
-    }).join('');
+      </div>`).join('');
     return `<div style="border:1px solid var(--border-color);border-radius:10px;overflow:hidden;margin-bottom:12px;">
       <div style="padding:10px 16px;background:#F8FAFC;font-size:13px;font-weight:700;border-bottom:1px solid var(--border-color);">
         📅 ${date} (${records.length}件)
@@ -4046,15 +3475,7 @@ async function renderECDashInto(d, gridId, summaryId, unitKey){
   const showUnit=channelShowUnit[unitKey]||false;
   let totalBoxes=0, totalItems=0, totalValue=0;
   const grid=document.getElementById(gridId); grid.innerHTML='';
-  const tabsEl=document.getElementById('ecMainBrandTabs');
-  const ecBrandsConfig=CP_BRANDS_CONFIG.filter(b=>b.id!=='限定')
-    .map(b=>({...b, items:b.items.filter(it=>!it.endsWith('パンフ')&&!it.endsWith('試食')&&!['ITA10','T10','T10SP'].includes(it))}));
-  if(tabsEl){
-    tabsEl.innerHTML=`<button class="sub-tab${ecMainBrand==='ALL'?' active':''}" onclick="switchECMainBrand('ALL')">全部</button>`+
-      ecBrandsConfig.map(b=>`<button class="sub-tab${b.id===ecMainBrand?' active':''}" onclick="switchECMainBrand('${b.id}')">${b.label}</button>`).join('');
-  }
-  const brandsToRender=ecMainBrand==='ALL'?ecBrandsConfig:ecBrandsConfig.filter(b=>b.id===ecMainBrand);
-  brandsToRender.forEach(br=>{
+  CP_BRANDS_CONFIG.forEach(br=>{
     const card=document.createElement('div'); card.className='brand-card';
     let brVal=0;
     const rows=br.items.map(item=>{
@@ -4065,24 +3486,19 @@ async function renderECDashInto(d, gridId, summaryId, unitKey){
       const p=priceMap[item]||{};
       const ecBoxQty2=p.ecQty||p.qty||1;
       const deptBoxQty2=p.qty||1;
-      // 棚卸あり：棚卸日以降の調貨、棚卸なし：全調貨を適用
-      Object.keys(transferCache).filter(date=>date>=ecStocktakeDate&&date<=d).sort().forEach(date=>{
-        (transferCache[date]||[]).forEach(t=>{
-          if(t.item!==item) return;
-          const units=t.units||(t.boxes||0)*ecBoxQty2;
-          if(t.from==='EC'){
-            const totalUnits=boxes*ecBoxQty2+loose-units;
-            if(totalUnits<=0){ boxes=0; loose=0; }
-            else { boxes=Math.floor(totalUnits/ecBoxQty2); loose=totalUnits%ecBoxQty2; }
-          }
-          if(t.to==='EC'&&t.from!=='VT百貨'){
-            const totalUnits=boxes*ecBoxQty2+loose+units;
-            boxes=Math.floor(totalUnits/ecBoxQty2); loose=totalUnits%ecBoxQty2;
-          }
-          if(t.from==='VT百貨'&&t.to==='EC'){ deptBoxes+=Math.floor(units/deptBoxQty2); }
-          if(t.from==='EC'&&t.to==='VT百貨'){ deptBoxes=Math.max(0,deptBoxes-Math.floor(units/deptBoxQty2)); }
+      // 棚卸日より後の調貨のみ（棚卸なしの場合は全調貨はdistMapに含まれるので不要）
+      if(useChannelStock){
+        Object.keys(transferCache).filter(date=>date>=ecStocktakeDate&&date<=d).sort().forEach(date=>{
+          (transferCache[date]||[]).forEach(t=>{
+            if(t.item!==item) return;
+            const units=t.units||(t.boxes||0)*ecBoxQty2;
+            if(t.from==='EC'){ boxes=Math.max(0,boxes-Math.floor(units/ecBoxQty2)); loose=Math.max(0,loose-units%ecBoxQty2); }
+            if(t.to==='EC'&&t.from!=='VT百貨'){ boxes+=Math.floor(units/ecBoxQty2); loose+=units%ecBoxQty2; }
+            if(t.from==='VT百貨'&&t.to==='EC'){ deptBoxes+=Math.floor(units/deptBoxQty2); }
+            if(t.from==='EC'&&t.to==='VT百貨'){ deptBoxes=Math.max(0,deptBoxes-Math.floor(units/deptBoxQty2)); }
+          });
         });
-      });
+      }
       const isEmpty=boxes===0&&loose===0&&deptBoxes===0;
       if(!isEmpty){ totalItems++; totalBoxes+=boxes+deptBoxes; }
       const ecBoxQty=p.ecQty||p.qty||0;
@@ -4123,43 +3539,31 @@ async function renderDeptDashInto(d, gridId, summaryId, unitKey){
   try{ const snap=await get(ref(db,'transferHistory')); transferCache=snap.val()||{}; }catch(e){}
   let totalBoxes=0, totalItems=0, totalValue=0;
   const grid=document.getElementById(gridId); grid.innerHTML='';
-  const tabsEl=document.getElementById('deptMainBrandTabs');
-  if(tabsEl){
-    tabsEl.innerHTML=`<button class="sub-tab${deptMainBrand==='ALL'?' active':''}" onclick="switchDeptMainBrand('ALL')">全部</button>`+
-      CP_BRANDS_CONFIG.map(b=>`<button class="sub-tab${b.id===deptMainBrand?' active':''}" onclick="switchDeptMainBrand('${b.id}')">${b.label}</button>`).join('');
-  }
-  const brandsToRender=deptMainBrand==='ALL'?CP_BRANDS_CONFIG:CP_BRANDS_CONFIG.filter(b=>b.id===deptMainBrand);
 
   if(useChannelStock){
     // 棚卸日以降の調貨のみ適用
     const stocktakeDate=await getChannelStockDate('VT百貨',d);
-    brandsToRender.forEach(br=>{
+    CP_BRANDS_CONFIG.forEach(br=>{
       const card=document.createElement('div'); card.className='brand-card';
       let brVal=0;
       const rows=br.items.map(item=>{
         const chItem=chStock[item]||{boxes:0,loose:0};
         let boxes=chItem.boxes||0;
         let loose=chItem.loose||0;
-        const p=priceMap[item]||{};
         // 棚卸日より後の調貨のみ適用
         Object.keys(transferCache).filter(date=>date>=stocktakeDate&&date<=d).sort().forEach(date=>{
           (transferCache[date]||[]).forEach(t=>{
             if(t.item!==item) return;
+            const p=priceMap[item]||{};
             const deptBoxQty=p.qty||1;
             const units=t.units||(t.boxes||0)*deptBoxQty;
-            if(t.from==='VT百貨'){
-              const total=boxes*deptBoxQty+loose-units;
-              if(total<=0){boxes=0;loose=0;}
-              else{boxes=Math.floor(total/deptBoxQty);loose=total%deptBoxQty;}
-            }
-            if(t.to==='VT百貨'){
-              const total2=boxes*deptBoxQty+loose+units;
-              boxes=Math.floor(total2/deptBoxQty);loose=total2%deptBoxQty;
-            }
+            if(t.from==='VT百貨'){ boxes=Math.max(0,boxes-Math.floor(units/deptBoxQty)); loose=Math.max(0,loose-units%deptBoxQty); }
+            if(t.to==='VT百貨'){ boxes+=Math.floor(units/deptBoxQty); loose+=units%deptBoxQty; }
           });
         });
         const isEmpty=boxes===0&&loose===0;
         if(!isEmpty){ totalItems++; totalBoxes+=boxes; }
+        const p=priceMap[item]||{};
         const val=boxes*(p.qty||0)*(p.price||0);
         brVal+=val; totalValue+=val;
         let display;
@@ -4179,7 +3583,7 @@ async function renderDeptDashInto(d, gridId, summaryId, unitKey){
   } else {
     // 棚卸なし → 調貨の累積のみ表示
     try{ const snap=await get(ref(db,'transferHistory')); transferCache=snap.val()||{}; }catch(e){}
-    brandsToRender.forEach(br=>{
+    CP_BRANDS_CONFIG.forEach(br=>{
       const card=document.createElement('div'); card.className='brand-card';
       let brVal=0;
       const rows=br.items.map(item=>{
@@ -4190,15 +3594,8 @@ async function renderDeptDashInto(d, gridId, summaryId, unitKey){
           (transferCache[date]||[]).forEach(t=>{
             if(t.item!==item) return;
             const units=t.units||(t.boxes||0)*deptBoxQty;
-            if(t.from==='VT百貨'){
-              const total=boxes*deptBoxQty+loose-units;
-              if(total<=0){boxes=0;loose=0;}
-              else{boxes=Math.floor(total/deptBoxQty);loose=total%deptBoxQty;}
-            }
-            if(t.to==='VT百貨'){
-              const total2=boxes*deptBoxQty+loose+units;
-              boxes=Math.floor(total2/deptBoxQty);loose=total2%deptBoxQty;
-            }
+            if(t.from==='VT百貨'){ boxes=Math.max(0,boxes-Math.floor(units/deptBoxQty)); loose=Math.max(0,loose-units%deptBoxQty); }
+            if(t.to==='VT百貨'){ boxes+=Math.floor(units/deptBoxQty); loose+=units%deptBoxQty; }
           });
         });
         const isEmpty=boxes===0&&loose===0;
@@ -4243,7 +3640,7 @@ window.switchTab=function(t){
     if(!document.getElementById('ecMainDateInput').value) document.getElementById('ecMainDateInput').value=today;
     switchECMainTab('stock');
   }
-  if(t==='dist'){ switchDistSubTab('transfer'); }
+  if(t==='dist'){ switchDistSubTab('init'); }
   if(t==='variant'){ renderVariantView(); }
   if(t==='analytics'){
     const today=new Date().toISOString().slice(0,10);
@@ -4414,20 +3811,10 @@ window.renderDeptDashMain=async function(){
   await renderDeptDashInto(d,'deptMainGrid','deptMainSummary','dept');
 };
 
-window.switchDeptMainBrand=function(brandId){
-  deptMainBrand=brandId;
-  renderDeptDashMain();
-};
-
 window.renderECDashMain=async function(){
   const d=document.getElementById('ecMainDateInput').value;
   if(!d) return;
   await renderECDashInto(d,'ecMainGrid','ecMainSummary','ec');
-};
-
-window.switchECMainBrand=function(brandId){
-  ecMainBrand=brandId;
-  renderECDashMain();
 };
 
 // 百貨棚卸（deptCount）
@@ -4448,11 +3835,11 @@ window.saveDeptChannelStock=async function(){
   const d=document.getElementById('deptCountDateInput').value;
   if(!d){ alert('日付を選択してください'); return; }
   const obj={};
-  Object.keys(deptCountForm).filter(k=>!k.includes('_loose')&&!k.includes('_deptBoxes')).forEach(item=>{
+  CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>{
     const boxes=Number(deptCountForm[item])||0;
     const loose=Number(deptCountForm[item+'_loose'])||0;
     if(boxes>0||loose>0){ obj[item]={boxes}; if(loose>0) obj[item].loose=loose; }
-  });
+  }));
   showSyncOverlay('保存中...');
   try{ await set(ref(db,`channelStock/VT百貨/${dateToKey(d)}`),obj); window.toast('百貨棚卸を保存しました！'); }
   catch(e){ window.toast('保存失敗：'+e.message); }
@@ -4470,56 +3857,34 @@ function renderDeptCountGrid(){
   const br=CP_BRANDS_CONFIG.find(b=>b.id===deptCountBrand)||CP_BRANDS_CONFIG[0];
   document.getElementById('deptCountBrandTabs').innerHTML=CP_BRANDS_CONFIG.map(b=>
     `<button class="sub-tab${b.id===deptCountBrand?' active':''}" onclick="switchDeptCountBrand('${b.id}')">${b.label}</button>`).join('');
-  let total=0;
-  Object.keys(deptCountForm).filter(k=>!k.includes('_loose')&&!k.includes('_deptBoxes')).forEach(k=>total+=Number(deptCountForm[k])||0);
+  let total=0; Object.entries(deptCountForm).filter(([k])=>!k.includes('_')).forEach(([,v])=>total+=Number(v)||0);
   document.getElementById('deptCountSummary').innerHTML=`
     <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">百貨 棚卸</div><div class="stat-v" style="color:#0C447C">${total} 箱</div></div>`;
   const grid=document.getElementById('deptCountGrid'); grid.innerHTML='';
-  br.items.forEach(baseItem=>{
-    // この品目に存在する改版（key が baseItem+SUFFIX の形式）を見つける
-    const variantKeys=Object.keys(deptCountForm).filter(k=>{
-      if(k.includes('_loose')||k.includes('_deptBoxes')) return false;
-      if(k===baseItem) return false;
-      return SUFFIXES.some(s=>k===baseItem+s);
-    });
-    const allKeys=[baseItem, ...variantKeys];
-    let cardTotal=0;
-    let html=`<div class="card-head"><span class="card-title">${baseItem}</span></div><div class="variant-rows-box">`;
-    allKeys.forEach(key=>{
-      const boxes=deptCountForm[key]||'';
-      const loose=deptCountForm[key+'_loose']||'';
-      const filled=Number(boxes)>0;
-      cardTotal+=Number(boxes)||0;
-      const label=key===baseItem?'オリジナル':key.replace(baseItem,'');
-      html+=`<div class="variant-row${filled?' filled':''}">
-          <span class="v-label">${label}</span>
+  br.items.forEach(item=>{
+    const boxes=deptCountForm[item]||''; const loose=deptCountForm[item+'_loose']||'';
+    const filled=Number(boxes)>0;
+    const card=document.createElement('div'); card.className='model-card'+(filled?' has-any':'');
+    card.innerHTML=`<div class="card-head"><span class="card-title">${item}</span>${filled?`<span class="card-total">=${boxes}箱</span>`:''}</div>
+      <div class="variant-rows-box">
+        <div class="variant-row${filled?' filled':''}">
+          <span class="v-label">箱数</span>
           <div class="qty-stepper">
-            <button onclick="deptCountStep('${key}',-1)">−</button>
-            <input type="number" class="qty-val" inputmode="numeric" value="${boxes}" oninput="deptCountSet('${key}',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
-            <button onclick="deptCountStep('${key}',1)">+</button>
+            <button onclick="deptCountStep('${item}',-1)">−</button>
+            <input type="number" class="qty-val" inputmode="numeric" value="${boxes}" oninput="deptCountSet('${item}',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+            <button onclick="deptCountStep('${item}',1)">+</button>
           </div>
         </div>
         <div style="padding:0 14px 8px;display:flex;align-items:center;gap:6px;">
           <span style="font-size:12px;color:var(--text-secondary);">＋バラ</span>
-          <input type="number" class="note-input" placeholder="個数" min="0" inputmode="numeric" value="${loose}" oninput="deptCountSetRaw('${key}_loose',this.value)" onblur="deptCountSet('${key}_loose',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}"
+          <input type="number" class="note-input" placeholder="個数" min="0" inputmode="numeric" value="${loose}" oninput="deptCountSetRaw('${item}_loose',this.value)" onblur="deptCountSet('${item}_loose',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}"
             style="width:80px;font-size:12px;padding:4px 8px;border:1px dashed #CBD5E1;border-radius:6px;outline:none;background:#FAFAFA;text-align:right;">
           <span style="font-size:12px;color:var(--text-secondary);">個</span>
-        </div>`;
-    });
-    html+=`</div><div class="card-action-box">
-      <select class="select-ui" onchange="if(this.value){deptCountAddSuffix('${baseItem}',this.value);this.value=''}">
-        <option value="">＋ 改版を追加...</option>
-        ${SUFFIXES.filter(s=>!variantKeys.includes(baseItem+s)).map(s=>`<option value="${s}">${baseItem}${s}</option>`).join('')}
-      </select></div>`;
-    const card=document.createElement('div'); card.className='model-card'+(cardTotal>0?' has-any':'');
-    card.innerHTML=html;
+        </div>
+      </div>`;
     grid.appendChild(card);
   });
 }
-window.deptCountAddSuffix=function(baseItem,suffix){
-  deptCountForm[baseItem+suffix]='';
-  renderDeptCountGrid();
-};
 window.switchDeptCountBrand=function(id){ deptCountBrand=id; renderDeptCountGrid(); };
 window.deptCountSetRaw=function(key,v){ deptCountForm[key]=v; };
 window.ecCountSetRaw=function(key,v){ ecCountForm[key]=v; };
@@ -4529,12 +3894,7 @@ window.deptCountSet=function(key,v){
   if(key.endsWith('_loose')){
     const item=key.replace('_loose','');
     const loose=Number(v)||0;
-    let p=priceMap[item]||{};
-    if(!p.qty){
-      // 改版の場合、原版の単価にフォールバック
-      const baseItem=item.replace(/N[2-6]?$/,'');
-      p=priceMap[baseItem]||{};
-    }
+    const p=priceMap[item]||{};
     const boxQty=p.qty||0;
     if(boxQty>0 && loose>=boxQty){
       deptCountForm[item]=(Number(deptCountForm[item])||0)+Math.floor(loose/boxQty);
@@ -4656,31 +4016,25 @@ window.startGuestApp=startGuestApp;
 </body>
 </html>
     <!-- ══ 分析 ══ -->
-    <div class="view active" id="view-analytics">
+    <div class="view" id="view-analytics">
       <div class="toolbar-layout" style="margin-bottom:16px;">
         <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
         <input type="date" id="analyticsDateInput" onchange="renderAnalytics()">
         <button class="btn primary" onclick="renderAnalytics()">📊 更新</button>
       </div>
       <div id="analyticsSummary" class="summary-row" style="margin-bottom:20px;"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;" id="analyticsChartRow">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;" id="analyticsChartRow">
         <!-- 通路占比 -->
         <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
           <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 通路別在庫占比</div>
           <canvas id="channelPieChart" width="300" height="300"></canvas>
           <div id="channelLegend" style="margin-top:12px;"></div>
         </div>
-        <!-- 百貨ブランド占比 -->
+        <!-- 品牌占比 -->
         <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 百貨ブランド別在庫占比</div>
-          <canvas id="deptBrandPieChart" width="300" height="300"></canvas>
-          <div id="deptBrandLegend" style="margin-top:12px;"></div>
-        </div>
-        <!-- ECブランド占比 -->
-        <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 ECブランド別在庫占比</div>
-          <canvas id="ecBrandPieChart" width="300" height="300"></canvas>
-          <div id="ecBrandLegend" style="margin-top:12px;"></div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 ブランド別在庫占比</div>
+          <canvas id="brandPieChart" width="300" height="300"></canvas>
+          <div id="brandLegend" style="margin-top:12px;"></div>
         </div>
       </div>
       <!-- 通路別金額バー -->
@@ -4710,16 +4064,15 @@ window.startGuestApp=startGuestApp;
     </div>
     <div class="guest-notice">📋 ゲストモードです。リアルタイム在庫の閲覧のみ可能です</div>
     <div class="tab-bar" style="flex-wrap:wrap;">
-      <button class="tab active" id="guestTab1" onclick="switchGuestTab('analytics')">📈 分析</button>
+      <button class="tab active" id="guestTab1" onclick="switchGuestTab('current')">📊 総量</button>
       <button class="tab" id="guestTab2" onclick="switchGuestTab('dept')">🏬 百貨</button>
       <button class="tab" id="guestTab3" onclick="switchGuestTab('ec')">🛒 EC</button>
-      <button class="tab" id="guestTab4" onclick="switchGuestTab('current')">📊 総量</button>
-      <button class="tab" id="guestTab5" onclick="switchGuestTab('web')">🌐 WEB</button>
-      <button class="tab" id="guestTab6" onclick="switchGuestTab('kaitori')">🛍 買取</button>
-      <button class="tab" id="guestTab7" onclick="switchGuestTab('variant')">🔍 改版明細</button>
+      <button class="tab" id="guestTab4" onclick="switchGuestTab('web')">🌐 WEB</button>
+      <button class="tab" id="guestTab5" onclick="switchGuestTab('kaitori')">🛍 買取</button>
+      <button class="tab" id="guestTab6" onclick="switchGuestTab('variant')">🔍 改版明細</button>
     </div>
     <!-- リアルタイム在庫 -->
-    <div id="guest-current" style="display:none;">
+    <div id="guest-current">
       <div class="toolbar-layout">
         <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
         <input type="date" id="guestDateInput" onchange="renderGuestDashboard()">
@@ -4777,45 +4130,6 @@ window.startGuestApp=startGuestApp;
       </div>
       <div class="summary-row" id="guestVariantSummary"></div>
       <div id="guestVariantGrid" class="brand-grid"></div>
-    </div>
-    <!-- 分析 -->
-    <div id="guest-analytics">
-      <div class="toolbar-layout" style="margin-bottom:16px;">
-        <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
-        <input type="date" id="guestAnalyticsDateInput" onchange="renderGuestAnalytics()">
-        <button class="btn primary" onclick="renderGuestAnalytics()">📊 更新</button>
-      </div>
-      <div id="guestAnalyticsSummary" class="summary-row" style="margin-bottom:20px;"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;" id="guestAnalyticsChartRow">
-        <!-- 通路占比 -->
-        <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 通路別在庫占比</div>
-          <canvas id="guestChannelPieChart" width="300" height="300"></canvas>
-          <div id="guestChannelLegend" style="margin-top:12px;"></div>
-        </div>
-        <!-- 百貨ブランド占比 -->
-        <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 百貨ブランド別在庫占比</div>
-          <canvas id="guestDeptBrandPieChart" width="300" height="300"></canvas>
-          <div id="guestDeptBrandLegend" style="margin-top:12px;"></div>
-        </div>
-        <!-- ECブランド占比 -->
-        <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 ECブランド別在庫占比</div>
-          <canvas id="guestEcBrandPieChart" width="300" height="300"></canvas>
-          <div id="guestEcBrandLegend" style="margin-top:12px;"></div>
-        </div>
-      </div>
-      <!-- 通路別金額バー -->
-      <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;margin-bottom:16px;">
-        <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">💰 通路別金額</div>
-        <div id="guestChannelValueBars"></div>
-      </div>
-      <!-- 品牌別金額バー -->
-      <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
-        <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">💰 ブランド別金額</div>
-        <div id="guestBrandValueBars"></div>
-      </div>
     </div>
 
 
