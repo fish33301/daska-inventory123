@@ -61,7 +61,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku
   .brand-grid{grid-template-columns:1fr;}
   .sub-tab-bar{gap:6px;}
   .sub-tab{padding:7px 12px;font-size:13px;}
-  #analyticsChartRow,#guestAnalyticsChartRow{grid-template-columns:1fr!important;}
   canvas{max-width:260px;margin:0 auto;display:block;}
 }
 
@@ -3511,76 +3510,140 @@ window.renderAnalytics=async function(){
 
   // サマリー
   document.getElementById('analyticsSummary').innerHTML=`
-    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">総在庫箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
-    <div class="stat" style="background:#FFF8E1;border-color:#FFD54F"><div class="stat-l" style="color:#E65100">総在庫金額</div><div class="stat-v" style="color:#BF360C;">¥${totalValue.toLocaleString()}</div></div>
-    <div class="stat"><div class="stat-l">計算日</div><div class="stat-v" style="font-size:15px;">${d}</div></div>`;
+    <div class="stat"><div class="stat-l">計算日</div><div class="stat-v" style="font-size:15px;">${d}</div></div>
+    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">百貨 金額</div><div class="stat-v" style="color:#0C447C;">¥${channelData['VT百貨'].value.toLocaleString()}</div></div>
+    <div class="stat" style="background:#EAF3DE;border-color:#A8D08D"><div class="stat-l" style="color:#3B6D11">EC 金額</div><div class="stat-v" style="color:#27500A;">¥${channelData['EC'].value.toLocaleString()}</div></div>`;
 
-  // 円グラフ（通路）
-  drawPieChart('channelPieChart', 'channelLegend',
-    channels.filter(ch=>channelData[ch].boxes>0).map(ch=>({
-      label:chLabels[ch], value:channelData[ch].boxes, color:chBgColors[ch]
-    })), totalBoxes, '箱');
-
-  // 円グラフ（百貨ブランド）
+  // 通路別金額（品牌内訳付き堆積バー）
   const brandColors={'DES':'#E53E3E','LF':'#DD6B20','LE':'#38A169','YT':'#3182CE','限定':'#805AD5','チーズ':'#D69E2E'};
-  const deptBrandTotal=Object.values(brandData).reduce((s,v)=>s+v.ch['VT百貨'].boxes,0);
-  drawPieChart('deptBrandPieChart', 'deptBrandLegend',
-    Object.entries(brandData).filter(([,v])=>v.ch['VT百貨'].boxes>0).map(([label,v])=>({
-      label, value:v.ch['VT百貨'].boxes, color:brandColors[label]||'#94A3B8'
-    })), deptBrandTotal, '箱');
+  renderChannelStackBars('channelStackBars', channelData, brandData, chLabels, brandColors);
 
-  // 円グラフ（ECブランド）
-  const ecBrandTotal=Object.values(brandData).reduce((s,v)=>s+v.ch['EC'].boxes,0);
-  drawPieChart('ecBrandPieChart', 'ecBrandLegend',
-    Object.entries(brandData).filter(([,v])=>v.ch['EC'].boxes>0).map(([label,v])=>({
-      label, value:v.ch['EC'].boxes, color:brandColors[label]||'#94A3B8'
-    })), ecBrandTotal, '箱');
+  // 通路別・品牌別金額バー（通路タブで切替）
+  analyticsValueCache={channelData, brandData, totalValue, chLabels, chBgColors};
+  renderAnalyticsValueTabs('analyticsValueChTabs','channelValueBars','brandValueBars','ALL');
+};
 
-  // 通路別金額バー
-  const maxChVal=Math.max(...channels.map(ch=>channelData[ch].value),1);
-  document.getElementById('channelValueBars').innerHTML=channels.map(ch=>{
-    const pct=Math.round(channelData[ch].value/maxChVal*100);
-    const sharePct=totalValue>0?Math.round(channelData[ch].value/totalValue*100):0;
-    return `<div style="margin-bottom:14px;">
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-        <span style="font-weight:600;">${chLabels[ch]}</span>
-        <span>¥${channelData[ch].value.toLocaleString()} <span style="color:var(--text-secondary);font-size:11px;">(${sharePct}%)</span></span>
-      </div>
-      <div style="background:#F1F5F9;border-radius:6px;height:28px;overflow:hidden;">
-        <div style="height:100%;width:${pct}%;background:${chBgColors[ch]};border-radius:6px;transition:width 0.5s;display:flex;align-items:center;padding-left:8px;">
-          ${pct>15?`<span style="font-size:11px;color:#fff;font-weight:700;">${channelData[ch].boxes}箱</span>`:''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-
-  // ブランド別金額バー（通路別の内訳・合計付き）
-  const chOrder=['VT百貨','EC','WEB','買取'];
-  const maxBrVal=Math.max(...Object.values(brandData).map(v=>v.value),1);
-  document.getElementById('brandValueBars').innerHTML=Object.entries(brandData).map(([label,v])=>{
-    const pct=Math.round(v.value/maxBrVal*100);
-    const sharePct=totalValue>0?Math.round(v.value/totalValue*100):0;
-    const segHtml=chOrder.map(ch=>{
-      const segShare=v.value>0?(v.ch[ch].value/v.value*100):0;
-      return segShare>0?`<div style="height:100%;width:${segShare}%;background:${chBgColors[ch]};" title="${chLabels[ch]} ¥${v.ch[ch].value.toLocaleString()}"></div>`:'';
+function renderChannelStackBars(elId, channelData, brandData, chLabels, brandColors){
+  const channels=['VT百貨','EC','WEB','買取'];
+  const brandLabels=Object.keys(brandData);
+  const maxVal=Math.max(...channels.map(ch=>channelData[ch].value),1);
+  document.getElementById(elId).innerHTML=channels.map(ch=>{
+    const chVal=channelData[ch].value;
+    const pct=Math.round(chVal/maxVal*100);
+    const segHtml=brandLabels.map(label=>{
+      const brVal=brandData[label].ch[ch].value;
+      const segShare=chVal>0?(brVal/chVal*100):0;
+      return segShare>0?`<div style="height:100%;width:${segShare}%;background:${brandColors[label]||'#94A3B8'};" title="${label} ¥${brVal.toLocaleString()}"></div>`:'';
     }).join('');
-    const breakdown=chOrder.filter(ch=>v.ch[ch].value>0).map(ch=>
+    const breakdown=brandLabels.filter(label=>brandData[label].ch[ch].value>0).map(label=>
       `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;margin-bottom:2px;">
-        <span style="width:8px;height:8px;border-radius:2px;background:${chBgColors[ch]};display:inline-block;flex-shrink:0;"></span>
-        ${chLabels[ch]} ¥${v.ch[ch].value.toLocaleString()}（${v.ch[ch].boxes}箱）
+        <span style="width:8px;height:8px;border-radius:2px;background:${brandColors[label]||'#94A3B8'};display:inline-block;flex-shrink:0;"></span>
+        ${label} ¥${brandData[label].ch[ch].value.toLocaleString()}
       </span>`
     ).join('');
     return `<div style="margin-bottom:18px;">
       <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-        <span style="font-weight:600;">${label}</span>
-        <span>合計 ¥${v.value.toLocaleString()} <span style="color:var(--text-secondary);font-size:11px;">(${sharePct}%)</span></span>
+        <span style="font-weight:600;">${chLabels[ch]}</span>
+        <span>¥${chVal.toLocaleString()}</span>
       </div>
       <div style="background:#F1F5F9;border-radius:6px;height:24px;overflow:hidden;">
         <div style="display:flex;height:100%;width:${pct}%;">${segHtml}</div>
       </div>
-      <div style="margin-top:6px;font-size:11px;color:var(--text-secondary);display:flex;flex-wrap:wrap;">${breakdown}</div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-secondary);display:flex;flex-wrap:wrap;">${breakdown||'<span style="color:var(--text-secondary);">データなし</span>'}</div>
     </div>`;
   }).join('');
+}
+
+let analyticsValueCache=null;
+window.renderAnalyticsValueTabs=function(tabsElId,chBarsId,brBarsId,activeCh){
+  const cache=analyticsValueCache;
+  if(!cache) return;
+  const {channelData,brandData,totalValue,chLabels,chBgColors}=cache;
+  const channels=['VT百貨','EC','WEB','買取'];
+
+  const tabsEl=document.getElementById(tabsElId);
+  if(tabsEl){
+    tabsEl.innerHTML=`<button class="sub-tab${activeCh==='ALL'?' active':''}" onclick="renderAnalyticsValueTabs('${tabsElId}','${chBarsId}','${brBarsId}','ALL')">全部</button>`+
+      channels.map(ch=>`<button class="sub-tab${ch===activeCh?' active':''}" onclick="renderAnalyticsValueTabs('${tabsElId}','${chBarsId}','${brBarsId}','${ch}')">${chLabels[ch]}</button>`).join('');
+  }
+
+  if(activeCh==='ALL'){
+    // 通路別金額バー（全通路一覧）
+    const maxChVal=Math.max(...channels.map(ch=>channelData[ch].value),1);
+    document.getElementById(chBarsId).innerHTML=channels.map(ch=>{
+      const pct=Math.round(channelData[ch].value/maxChVal*100);
+      const sharePct=totalValue>0?Math.round(channelData[ch].value/totalValue*100):0;
+      return `<div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+          <span style="font-weight:600;">${chLabels[ch]}</span>
+          <span>¥${channelData[ch].value.toLocaleString()} <span style="color:var(--text-secondary);font-size:11px;">(${sharePct}%)</span></span>
+        </div>
+        <div style="background:#F1F5F9;border-radius:6px;height:28px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${chBgColors[ch]};border-radius:6px;transition:width 0.5s;"></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // ブランド別金額バー（通路別の内訳・合計付き）
+    const chOrder=channels;
+    const maxBrVal=Math.max(...Object.values(brandData).map(v=>v.value),1);
+    document.getElementById(brBarsId).innerHTML=Object.entries(brandData).map(([label,v])=>{
+      const pct=Math.round(v.value/maxBrVal*100);
+      const sharePct=totalValue>0?Math.round(v.value/totalValue*100):0;
+      const segHtml=chOrder.map(ch=>{
+        const segShare=v.value>0?(v.ch[ch].value/v.value*100):0;
+        return segShare>0?`<div style="height:100%;width:${segShare}%;background:${chBgColors[ch]};" title="${chLabels[ch]} ¥${v.ch[ch].value.toLocaleString()}"></div>`:'';
+      }).join('');
+      const breakdown=chOrder.filter(ch=>v.ch[ch].value>0).map(ch=>
+        `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;margin-bottom:2px;">
+          <span style="width:8px;height:8px;border-radius:2px;background:${chBgColors[ch]};display:inline-block;flex-shrink:0;"></span>
+          ${chLabels[ch]} ¥${v.ch[ch].value.toLocaleString()}
+        </span>`
+      ).join('');
+      return `<div style="margin-bottom:18px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+          <span style="font-weight:600;">${label}</span>
+          <span>合計 ¥${v.value.toLocaleString()} <span style="color:var(--text-secondary);font-size:11px;">(${sharePct}%)</span></span>
+        </div>
+        <div style="background:#F1F5F9;border-radius:6px;height:24px;overflow:hidden;">
+          <div style="display:flex;height:100%;width:${pct}%;">${segHtml}</div>
+        </div>
+        <div style="margin-top:6px;font-size:11px;color:var(--text-secondary);display:flex;flex-wrap:wrap;">${breakdown}</div>
+      </div>`;
+    }).join('');
+  } else {
+    // 通路別金額バー（単一通路のみ）
+    const chVal=channelData[activeCh].value;
+    document.getElementById(chBarsId).innerHTML=`<div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+        <span style="font-weight:600;">${chLabels[activeCh]}</span>
+        <span>¥${chVal.toLocaleString()}</span>
+      </div>
+      <div style="background:#F1F5F9;border-radius:6px;height:28px;overflow:hidden;">
+        <div style="height:100%;width:100%;background:${chBgColors[activeCh]};border-radius:6px;"></div>
+      </div>
+    </div>`;
+
+    // ブランド別金額バー（単一通路の品牌別のみ）
+    const brEntries=Object.entries(brandData).filter(([,v])=>v.ch[activeCh].value>0);
+    const maxBrVal=Math.max(...brEntries.map(([,v])=>v.ch[activeCh].value),1);
+    document.getElementById(brBarsId).innerHTML=brEntries.length===0
+      ?'<div style="color:var(--text-secondary);font-size:13px;padding:12px;text-align:center;">データなし</div>'
+      :brEntries.map(([label,v])=>{
+        const val=v.ch[activeCh].value;
+        const pct=Math.round(val/maxBrVal*100);
+        const sharePct=chVal>0?Math.round(val/chVal*100):0;
+        return `<div style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+            <span style="font-weight:600;">${label}</span>
+            <span>¥${val.toLocaleString()} <span style="color:var(--text-secondary);font-size:11px;">(${sharePct}%)</span></span>
+          </div>
+          <div style="background:#F1F5F9;border-radius:6px;height:24px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${chBgColors[activeCh]};border-radius:6px;"></div>
+          </div>
+        </div>`;
+      }).join('');
+  }
 };
 
 window.renderGuestAnalytics=async function(){
@@ -3697,76 +3760,17 @@ window.renderGuestAnalytics=async function(){
 
   // サマリー
   document.getElementById('guestAnalyticsSummary').innerHTML=`
-    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">総在庫箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
-    <div class="stat" style="background:#FFF8E1;border-color:#FFD54F"><div class="stat-l" style="color:#E65100">総在庫金額</div><div class="stat-v" style="color:#BF360C;">¥${totalValue.toLocaleString()}</div></div>
-    <div class="stat"><div class="stat-l">計算日</div><div class="stat-v" style="font-size:15px;">${d}</div></div>`;
+    <div class="stat"><div class="stat-l">計算日</div><div class="stat-v" style="font-size:15px;">${d}</div></div>
+    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">百貨 金額</div><div class="stat-v" style="color:#0C447C;">¥${channelData['VT百貨'].value.toLocaleString()}</div></div>
+    <div class="stat" style="background:#EAF3DE;border-color:#A8D08D"><div class="stat-l" style="color:#3B6D11">EC 金額</div><div class="stat-v" style="color:#27500A;">¥${channelData['EC'].value.toLocaleString()}</div></div>`;
 
-  // 円グラフ（通路）
-  drawPieChart('guestChannelPieChart', 'guestChannelLegend',
-    channels.filter(ch=>channelData[ch].boxes>0).map(ch=>({
-      label:chLabels[ch], value:channelData[ch].boxes, color:chBgColors[ch]
-    })), totalBoxes, '箱');
+  // 通路別金額（品牌内訳付き堆積バー）
+  const guestBrandColors={'DES':'#E53E3E','LF':'#DD6B20','LE':'#38A169','YT':'#3182CE','限定':'#805AD5','チーズ':'#D69E2E'};
+  renderChannelStackBars('guestChannelStackBars', channelData, brandData, chLabels, guestBrandColors);
 
-  // 円グラフ（百貨ブランド）
-  const brandColors={'DES':'#E53E3E','LF':'#DD6B20','LE':'#38A169','YT':'#3182CE','限定':'#805AD5','チーズ':'#D69E2E'};
-  const guestDeptBrandTotal=Object.values(brandData).reduce((s,v)=>s+v.ch['VT百貨'].boxes,0);
-  drawPieChart('guestDeptBrandPieChart', 'guestDeptBrandLegend',
-    Object.entries(brandData).filter(([,v])=>v.ch['VT百貨'].boxes>0).map(([label,v])=>({
-      label, value:v.ch['VT百貨'].boxes, color:brandColors[label]||'#94A3B8'
-    })), guestDeptBrandTotal, '箱');
-
-  // 円グラフ（ECブランド）
-  const guestEcBrandTotal=Object.values(brandData).reduce((s,v)=>s+v.ch['EC'].boxes,0);
-  drawPieChart('guestEcBrandPieChart', 'guestEcBrandLegend',
-    Object.entries(brandData).filter(([,v])=>v.ch['EC'].boxes>0).map(([label,v])=>({
-      label, value:v.ch['EC'].boxes, color:brandColors[label]||'#94A3B8'
-    })), guestEcBrandTotal, '箱');
-
-  // 通路別金額バー
-  const maxChVal=Math.max(...channels.map(ch=>channelData[ch].value),1);
-  document.getElementById('guestChannelValueBars').innerHTML=channels.map(ch=>{
-    const pct=Math.round(channelData[ch].value/maxChVal*100);
-    const sharePct=totalValue>0?Math.round(channelData[ch].value/totalValue*100):0;
-    return `<div style="margin-bottom:14px;">
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-        <span style="font-weight:600;">${chLabels[ch]}</span>
-        <span>¥${channelData[ch].value.toLocaleString()} <span style="color:var(--text-secondary);font-size:11px;">(${sharePct}%)</span></span>
-      </div>
-      <div style="background:#F1F5F9;border-radius:6px;height:28px;overflow:hidden;">
-        <div style="height:100%;width:${pct}%;background:${chBgColors[ch]};border-radius:6px;transition:width 0.5s;display:flex;align-items:center;padding-left:8px;">
-          ${pct>15?`<span style="font-size:11px;color:#fff;font-weight:700;">${channelData[ch].boxes}箱</span>`:''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-
-  // ブランド別金額バー（通路別の内訳・合計付き）
-  const chOrder=['VT百貨','EC','WEB','買取'];
-  const maxBrVal=Math.max(...Object.values(brandData).map(v=>v.value),1);
-  document.getElementById('guestBrandValueBars').innerHTML=Object.entries(brandData).map(([label,v])=>{
-    const pct=Math.round(v.value/maxBrVal*100);
-    const sharePct=totalValue>0?Math.round(v.value/totalValue*100):0;
-    const segHtml=chOrder.map(ch=>{
-      const segShare=v.value>0?(v.ch[ch].value/v.value*100):0;
-      return segShare>0?`<div style="height:100%;width:${segShare}%;background:${chBgColors[ch]};" title="${chLabels[ch]} ¥${v.ch[ch].value.toLocaleString()}"></div>`:'';
-    }).join('');
-    const breakdown=chOrder.filter(ch=>v.ch[ch].value>0).map(ch=>
-      `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;margin-bottom:2px;">
-        <span style="width:8px;height:8px;border-radius:2px;background:${chBgColors[ch]};display:inline-block;flex-shrink:0;"></span>
-        ${chLabels[ch]} ¥${v.ch[ch].value.toLocaleString()}（${v.ch[ch].boxes}箱）
-      </span>`
-    ).join('');
-    return `<div style="margin-bottom:18px;">
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-        <span style="font-weight:600;">${label}</span>
-        <span>合計 ¥${v.value.toLocaleString()} <span style="color:var(--text-secondary);font-size:11px;">(${sharePct}%)</span></span>
-      </div>
-      <div style="background:#F1F5F9;border-radius:6px;height:24px;overflow:hidden;">
-        <div style="display:flex;height:100%;width:${pct}%;">${segHtml}</div>
-      </div>
-      <div style="margin-top:6px;font-size:11px;color:var(--text-secondary);display:flex;flex-wrap:wrap;">${breakdown}</div>
-    </div>`;
-  }).join('');
+  // 通路別・品牌別金額バー（通路タブで切替）
+  analyticsValueCache={channelData, brandData, totalValue, chLabels, chBgColors};
+  renderAnalyticsValueTabs('guestAnalyticsValueChTabs','guestChannelValueBars','guestBrandValueBars','ALL');
 };
 
 function drawPieChart(canvasId, legendId, items, total, unit){
@@ -5488,26 +5492,13 @@ window.startGuestApp=startGuestApp;
         <button class="btn primary" onclick="renderAnalytics()">📊 更新</button>
       </div>
       <div id="analyticsSummary" class="summary-row" style="margin-bottom:20px;"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;" id="analyticsChartRow">
-        <!-- 通路占比 -->
-        <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 通路別在庫占比</div>
-          <canvas id="channelPieChart" width="300" height="300"></canvas>
-          <div id="channelLegend" style="margin-top:12px;"></div>
-        </div>
-        <!-- 百貨ブランド占比 -->
-        <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 百貨ブランド別在庫占比</div>
-          <canvas id="deptBrandPieChart" width="300" height="300"></canvas>
-          <div id="deptBrandLegend" style="margin-top:12px;"></div>
-        </div>
-        <!-- ECブランド占比 -->
-        <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 ECブランド別在庫占比</div>
-          <canvas id="ecBrandPieChart" width="300" height="300"></canvas>
-          <div id="ecBrandLegend" style="margin-top:12px;"></div>
-        </div>
+      <!-- 通路別金額（品牌内訳付き堆積バー） -->
+      <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;margin-bottom:20px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">📊 通路別金額（ブランド内訳）</div>
+        <div id="channelStackBars"></div>
       </div>
+      <!-- 通路分頁籤（金額表示の切替用） -->
+      <div class="sub-tab-bar" id="analyticsValueChTabs" style="margin-bottom:16px;"></div>
       <!-- 通路別金額バー -->
       <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;margin-bottom:16px;">
         <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">💰 通路別金額</div>
@@ -5613,26 +5604,13 @@ window.startGuestApp=startGuestApp;
         <button class="btn primary" onclick="renderGuestAnalytics()">📊 更新</button>
       </div>
       <div id="guestAnalyticsSummary" class="summary-row" style="margin-bottom:20px;"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;" id="guestAnalyticsChartRow">
-        <!-- 通路占比 -->
-        <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 通路別在庫占比</div>
-          <canvas id="guestChannelPieChart" width="300" height="300"></canvas>
-          <div id="guestChannelLegend" style="margin-top:12px;"></div>
-        </div>
-        <!-- 百貨ブランド占比 -->
-        <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 百貨ブランド別在庫占比</div>
-          <canvas id="guestDeptBrandPieChart" width="300" height="300"></canvas>
-          <div id="guestDeptBrandLegend" style="margin-top:12px;"></div>
-        </div>
-        <!-- ECブランド占比 -->
-        <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">🍩 ECブランド別在庫占比</div>
-          <canvas id="guestEcBrandPieChart" width="300" height="300"></canvas>
-          <div id="guestEcBrandLegend" style="margin-top:12px;"></div>
-        </div>
+      <!-- 通路別金額（品牌内訳付き堆積バー） -->
+      <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;margin-bottom:20px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">📊 通路別金額（ブランド内訳）</div>
+        <div id="guestChannelStackBars"></div>
       </div>
+      <!-- 通路分頁籤（金額表示の切替用） -->
+      <div class="sub-tab-bar" id="guestAnalyticsValueChTabs" style="margin-bottom:16px;"></div>
       <!-- 通路別金額バー -->
       <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:20px;margin-bottom:16px;">
         <div style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">💰 通路別金額</div>
@@ -5644,3 +5622,5 @@ window.startGuestApp=startGuestApp;
         <div id="guestBrandValueBars"></div>
       </div>
     </div>
+
+
