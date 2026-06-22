@@ -380,7 +380,6 @@ input[type="date"]:focus,input[type="text"]:focus{border-color:#378ADD;box-shado
       <button class="tab" data-tab="dash" onclick="switchTab('dash')">📊 <span class="tab-label-full">総量在庫</span><span class="tab-label-short">総量</span></button>
       <button class="tab" data-tab="edit" onclick="switchTab('edit')">📝 <span class="tab-label-full">入庫/棚卸</span><span class="tab-label-short">入庫</span></button>
       <button class="tab" data-tab="dist" onclick="switchTab('dist')">🚚 <span class="tab-label-full">通路配分</span><span class="tab-label-short">配分</span></button>
-      <button class="tab" data-tab="variant" onclick="switchTab('variant')">🔍 <span class="tab-label-full">改版明細</span><span class="tab-label-short">改版</span></button>
       <button class="tab" data-tab="price" onclick="switchTab('price')">💰 <span class="tab-label-full">単価設定</span><span class="tab-label-short">単価</span></button>
     </div>
     <div class="view" id="view-edit">
@@ -534,6 +533,17 @@ input[type="date"]:focus,input[type="text"]:focus{border-color:#378ADD;box-shado
         <div class="summary-row" id="deptMainSummary"></div>
         <div class="sub-tab-bar" id="deptMainBrandTabs"></div>
         <div class="brand-grid" id="deptMainGrid"></div>
+        <!-- 改版明細（百貨） -->
+        <div style="margin-top:24px;">
+          <div style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 0;border-top:1px solid var(--border-color);" onclick="toggleDeptVariantDetail()">
+            <span id="deptVariantToggleIcon" style="font-size:13px;color:var(--text-secondary);">▶</span>
+            <span style="font-size:14px;font-weight:700;color:var(--text-primary);">📐 改版明細（百貨）</span>
+          </div>
+          <div id="deptVariantDetailBody" style="display:none;">
+            <div class="summary-row" id="deptVariantSummary"></div>
+            <div id="deptVariantGrid" class="brand-grid"></div>
+          </div>
+        </div>
       </div>
       <!-- 百貨棚卸 -->
       <div id="dept-count" style="display:none;">
@@ -651,16 +661,7 @@ input[type="date"]:focus,input[type="text"]:focus{border-color:#378ADD;box-shado
         <div id="transferHistory"></div>
       </div>
     </div>
-    <!-- ══ 改版明細 ══ -->
-    <div class="view" id="view-variant">
-      <div class="toolbar-layout">
-        <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
-        <input type="date" id="variantDateInput" onchange="renderVariantView()">
-      </div>
-      <div class="summary-row" id="variantSummary"></div>
-      <div id="variantGrid" class="brand-grid"></div>
-    </div>
-    <!-- ══ 単価設定 ══ -->
+    <!-- ══ 単價設定 ══ -->
     <div class="view" id="view-price">
       <div class="price-save-bar">
         <span style="font-size:14px;font-weight:600;color:var(--text-secondary);">💰 設定1箱あたり個数與個数単価</span>
@@ -1131,9 +1132,6 @@ async function startApp(){
     if(!priceReady) return;
     if(document.getElementById('view-dash').classList.contains('active')){
       renderDashboard();
-    }
-    if(document.getElementById('view-variant').classList.contains('active')){
-      renderVariantView();
     }
   }
 
@@ -2325,7 +2323,7 @@ window.toggleGuestChannelUnit=function(ch){
 };
 
 window.switchGuestTab=function(tab){
-  const tabs=['analytics','dept','ec','current','web','kaitori','variant'];
+  const tabs=['analytics','dept','ec','current','web','kaitori'];
   tabs.forEach((t,i)=>{
     const btn=document.getElementById('guestTab'+(i+1));
     if(btn) btn.classList.toggle('active',t===tab);
@@ -2334,11 +2332,6 @@ window.switchGuestTab=function(tab){
   });
   const today=new Date().toISOString().slice(0,10);
   if(tab==='current') renderGuestDashboard();
-  if(tab==='variant'){
-    const el=document.getElementById('guestVariantDateInput');
-    if(!el.value) el.value=document.getElementById('guestDateInput').value||today;
-    renderGuestVariantView();
-  }
   if(tab==='dept'){
     const el=document.getElementById('guestDeptDateInput');
     if(!el.value) el.value=today;
@@ -2433,27 +2426,32 @@ window.renderGuestChannelDash=async function(tabId, channelKey){
     <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">${channelKey} 総箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
     <div class="stat" style="background:#FFF8E1;border-color:#FFD54F"><div class="stat-l" style="color:#E65100">金額</div><div class="stat-v" style="color:#BF360C;font-size:16px;">${totalValue>0?'¥'+totalValue.toLocaleString():'—'}</div></div>
     <div class="stat"><div class="stat-l">計算日</div><div class="stat-v" style="font-size:15px;">${d}</div></div>`;
+  if(tabId==='dept'){
+    const variantBody=document.getElementById('guestDeptVariantDetailBody');
+    if(variantBody && variantBody.style.display!=='none') renderGuestVariantView();
+  }
 };
 
-window.renderGuestVariantView=function(){
-  const d=document.getElementById('guestVariantDateInput').value;
+window.toggleGuestDeptVariantDetail=function(){
+  const body=document.getElementById('guestDeptVariantDetailBody');
+  const icon=document.getElementById('guestDeptVariantToggleIcon');
+  const opening=body.style.display==='none';
+  body.style.display=opening?'block':'none';
+  icon.textContent=opening?'▼':'▶';
+  if(opening) renderGuestVariantView();
+};
+
+window.renderGuestVariantView=async function(){
+  const d=document.getElementById('guestDeptDateInput').value;
   if(!d) return;
-  const allDates=new Set([...Object.keys(inCache),...Object.keys(cpCache)]);
-  let fullStockMap={};
-  Array.from(allDates).filter(date=>date<=d).sort().forEach(date=>{
-    const cpD=cpCache[date],inD=inCache[date];
-    if(cpD){
-      fullStockMap={};
-      Object.values(cpD).forEach(i=>{ fullStockMap[i.model]=(fullStockMap[i.model]||0)+i.qty; });
-    } else if(inD){
-      Object.values(inD).forEach(i=>{ fullStockMap[i.model]=(fullStockMap[i.model]||0)+i.qty; });
-    }
-  });
+  const chStock=await getChannelStock('VT百貨',d);
+  const fullStockMap={};
+  Object.entries(chStock).forEach(([key,val])=>{ fullStockMap[key]=val.boxes||0; });
   let totalItems=0,totalBoxes=0;
   Object.values(fullStockMap).forEach(v=>{ if(v>0){totalItems++;totalBoxes+=v;} });
   document.getElementById('guestVariantSummary').innerHTML=`
-    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">在庫あり品目(含改版)</div><div class="stat-v" style="color:#0C447C">${totalItems}</div></div>
-    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">総在庫箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
+    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">百貨 在庫あり品目(含改版)</div><div class="stat-v" style="color:#0C447C">${totalItems}</div></div>
+    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">百貨 総在庫箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
     <div class="stat"><div class="stat-l">計算日</div><div class="stat-v" style="font-size:15px;color:var(--text-primary)">${d}</div></div>`;
   const grid=document.getElementById('guestVariantGrid'); grid.innerHTML='';
   const SUFFIXES_LIST=['','N','N2','N3','N4','N5','N6'];
@@ -2618,39 +2616,35 @@ window.toggleHistBlock=function(header){
   grid.style.display=header.classList.contains('collapsed')?'none':'grid';
 };
 
-window.renderVariantView=function(){
-  const d=document.getElementById('variantDateInput').value;
+window.toggleDeptVariantDetail=function(){
+  const body=document.getElementById('deptVariantDetailBody');
+  const icon=document.getElementById('deptVariantToggleIcon');
+  const opening=body.style.display==='none';
+  body.style.display=opening?'block':'none';
+  icon.textContent=opening?'▼':'▶';
+  if(opening) renderDeptVariantDetail();
+};
+
+window.renderDeptVariantDetail=async function(){
+  const d=document.getElementById('deptMainDateInput').value;
   if(!d) return;
-  const allDates=new Set([...Object.keys(inCache),...Object.keys(cpCache)]);
-  // stockMap keyed by FULL model name (e.g. "T3", "T3N", "T3N2")
-  let fullStockMap={};
-  Array.from(allDates).filter(date=>date<=d).sort().forEach(date=>{
-    const cpD=cpCache[date], inD=inCache[date];
-    if(cpD){
-      fullStockMap={};
-      Object.values(cpD).forEach(i=>{ fullStockMap[i.model]=(fullStockMap[i.model]||0)+i.qty; });
-    } else if(inD){
-      Object.values(inD).forEach(i=>{ fullStockMap[i.model]=(fullStockMap[i.model]||0)+i.qty; });
-    }
-  });
+  const chStock=await getChannelStock('VT百貨',d);
+  // fullStockMap keyed by FULL model name (e.g. "T3", "T3N", "T3N2") — 百貨棚卸データから
+  const fullStockMap={};
+  Object.entries(chStock).forEach(([key,val])=>{ fullStockMap[key]=val.boxes||0; });
 
   // Summary
   let totalItems=0, totalBoxes=0;
   Object.values(fullStockMap).forEach(v=>{ if(v>0){totalItems++;totalBoxes+=v;} });
-  document.getElementById('variantSummary').innerHTML=`
-    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">在庫あり品目(含改版)</div><div class="stat-v" style="color:#0C447C">${totalItems}</div></div>
-    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">総在庫箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
+  document.getElementById('deptVariantSummary').innerHTML=`
+    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">百貨 在庫あり品目(含改版)</div><div class="stat-v" style="color:#0C447C">${totalItems}</div></div>
+    <div class="stat" style="background:#E6F1FB;border-color:#85B7EB"><div class="stat-l" style="color:#185FA5">百貨 総在庫箱数</div><div class="stat-v" style="color:#0C447C">${totalBoxes}</div></div>
     <div class="stat"><div class="stat-l">計算日</div><div class="stat-v" style="font-size:15px;color:var(--text-primary)">${d}</div></div>`;
 
-  const grid=document.getElementById('variantGrid'); grid.innerHTML='';
+  const grid=document.getElementById('deptVariantGrid'); grid.innerHTML='';
   const SUFFIXES_LIST=['','N','N2','N3','N4','N5','N6'];
 
   CP_BRANDS_CONFIG.forEach(br=>{
-    // check if this brand has any stock at all
-    const brandHasStock=br.items.some(base=>
-      SUFFIXES_LIST.some(s=>{ const k=base+(s||''); return (fullStockMap[k]||0)>0; })
-    );
-
     const block=document.createElement('div');
     block.className='variant-brand-block';
 
@@ -2662,8 +2656,6 @@ window.renderVariantView=function(){
         return fullStockMap.hasOwnProperty(k)||(fullStockMap[k]||0)>0;
       });
       if(variants.length===0){
-        // show base with 0
-        const qty=0;
         tableRows+=`<tr class="variant-item-row">
           <td class="vname vname-base">${base}</td>
           <td class="vqty zero">0 箱</td>
@@ -2672,14 +2664,12 @@ window.renderVariantView=function(){
       }
       const baseTotal=variants.reduce((s,sf)=>s+(fullStockMap[base+(sf||'')]||0),0);
       if(variants.length===1 && variants[0]===''){
-        // only original version, no N variants
         const qty=fullStockMap[base]||0;
         tableRows+=`<tr class="variant-item-row${qty>0?' has-stock':''}">
           <td class="vname vname-base">${base}</td>
           <td class="vqty${qty===0?' zero':''}">${qty} 箱</td>
         </tr>`;
       } else {
-        // has N variants — show summary row then sub-rows
         tableRows+=`<tr class="variant-item-row" style="background:#F8FAFC;">
           <td class="vname vname-base">${base} <span style="font-size:11px;color:var(--text-secondary);font-weight:400;">（合計）</span></td>
           <td class="vqty${baseTotal===0?' zero':''}" style="color:var(--blue-dark)">${baseTotal} 箱</td>
@@ -4143,6 +4133,11 @@ async function renderDeptDashInto(d, gridId, summaryId, unitKey){
         const chItem=chStock[item]||{boxes:0,loose:0};
         let boxes=chItem.boxes||0;
         let loose=chItem.loose||0;
+        // 改版型号（N/N2/N3...）の箱数も合算する
+        SUFFIXES.forEach(suf=>{
+          const vItem=chStock[item+suf];
+          if(vItem){ boxes+=vItem.boxes||0; loose+=vItem.loose||0; }
+        });
         const p=priceMap[item]||{};
         // 棚卸日より後の調貨のみ適用
         Object.keys(transferCache).filter(date=>date>=stocktakeDate&&date<=d).sort().forEach(date=>{
@@ -4233,7 +4228,6 @@ window.switchTab=function(t){
   document.getElementById('view-dept').classList.toggle('active',t==='dept');
   document.getElementById('view-ec').classList.toggle('active',t==='ec');
   document.getElementById('view-dist').classList.toggle('active',t==='dist');
-  document.getElementById('view-variant').classList.toggle('active',t==='variant');
   document.getElementById('view-price').classList.toggle('active',t==='price');
   document.getElementById('view-analytics').classList.toggle('active',t==='analytics');
   const today=new Date().toISOString().slice(0,10);
@@ -4247,11 +4241,6 @@ window.switchTab=function(t){
     switchECMainTab('stock');
   }
   if(t==='dist'){ switchDistSubTab('transfer'); }
-  if(t==='variant'){
-    const vdInput=document.getElementById('variantDateInput');
-    if(!vdInput.value) vdInput.value=new Date().toISOString().slice(0,10);
-    renderVariantView();
-  }
   if(t==='analytics'){
     const today=new Date().toISOString().slice(0,10);
     if(!document.getElementById('analyticsDateInput').value) document.getElementById('analyticsDateInput').value=today;
@@ -4419,6 +4408,8 @@ window.renderDeptDashMain=async function(){
   const d=document.getElementById('deptMainDateInput').value;
   if(!d) return;
   await renderDeptDashInto(d,'deptMainGrid','deptMainSummary','dept');
+  const variantBody=document.getElementById('deptVariantDetailBody');
+  if(variantBody && variantBody.style.display!=='none') renderDeptVariantDetail();
 };
 
 window.switchDeptMainBrand=function(brandId){
@@ -4723,7 +4714,6 @@ window.startGuestApp=startGuestApp;
       <button class="tab" id="guestTab4" onclick="switchGuestTab('current')">📊 総量</button>
       <button class="tab" id="guestTab5" onclick="switchGuestTab('web')">🌐 WEB</button>
       <button class="tab" id="guestTab6" onclick="switchGuestTab('kaitori')">🛍 買取</button>
-      <button class="tab" id="guestTab7" onclick="switchGuestTab('variant')">🔍 改版明細</button>
     </div>
     <!-- リアルタイム在庫 -->
     <div id="guest-current" style="display:none;">
@@ -4745,6 +4735,17 @@ window.startGuestApp=startGuestApp;
       </div>
       <div class="summary-row" id="guestDeptSummary"></div>
       <div class="brand-grid" id="guestDeptGrid"></div>
+      <!-- 改版明細（百貨） -->
+      <div style="margin-top:24px;">
+        <div style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 0;border-top:1px solid var(--border-color);" onclick="toggleGuestDeptVariantDetail()">
+          <span id="guestDeptVariantToggleIcon" style="font-size:13px;color:var(--text-secondary);">▶</span>
+          <span style="font-size:14px;font-weight:700;color:var(--text-primary);">📐 改版明細（百貨）</span>
+        </div>
+        <div id="guestDeptVariantDetailBody" style="display:none;">
+          <div class="summary-row" id="guestVariantSummary"></div>
+          <div id="guestVariantGrid" class="brand-grid"></div>
+        </div>
+      </div>
     </div>
     <!-- EC在庫 -->
     <div id="guest-ec" style="display:none;">
@@ -4775,15 +4776,6 @@ window.startGuestApp=startGuestApp;
       </div>
       <div class="summary-row" id="guestKaitoriSummary"></div>
       <div class="brand-grid" id="guestKaitoriGrid"></div>
-    </div>
-    <!-- 改版明細 -->
-    <div id="guest-variant" style="display:none;">
-      <div class="toolbar-layout">
-        <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">在庫計算日</label>
-        <input type="date" id="guestVariantDateInput" onchange="renderGuestVariantView()">
-      </div>
-      <div class="summary-row" id="guestVariantSummary"></div>
-      <div id="guestVariantGrid" class="brand-grid"></div>
     </div>
     <!-- 分析 -->
     <div id="guest-analytics">
@@ -4824,5 +4816,3 @@ window.startGuestApp=startGuestApp;
         <div id="guestBrandValueBars"></div>
       </div>
     </div>
-
-
