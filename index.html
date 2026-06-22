@@ -3166,6 +3166,12 @@ window.renderAnalytics=async function(){
   try{ const snap2=await get(ref(db,'transferHistory')); transferCache=snap2.val()||{}; }catch(e){}
   const distMap=calcDistMapWithTransfer(d);
 
+  // 棚卸日以降の調貨を適用するための基準日
+  const deptHasStock=Object.keys(chStocks['VT百貨']).length>0;
+  const ecHasStockGlobal=Object.keys(chStocks['EC']).length>0;
+  const deptStocktakeDate=deptHasStock?await getChannelStockDate('VT百貨',d):'0000-00-00';
+  const ecStocktakeDate=ecHasStockGlobal?await getChannelStockDate('EC',d):'0000-00-00';
+
   // 通路別・品牌別の箱数と金額を集計
   const channelData={};
   const brandData={};
@@ -3176,8 +3182,8 @@ window.renderAnalytics=async function(){
 
   CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>{
     const p=priceMap[item]||{};
-    const ecBoxQty=p.ecQty||p.qty||0;
-    const deptBoxQty=p.qty||0;
+    const ecBoxQty=p.ecQty||p.qty||1;
+    const deptBoxQty=p.qty||1;
     const price=p.price||0;
 
     // EC通路の生データ（自社EC箱数・バラ・EC倉に紐づく百貨分の箱数）
@@ -3190,10 +3196,45 @@ window.renderAnalytics=async function(){
       ecOwnBoxes=distMap[item]?.EC?.boxes||0; ecLoose=0;
       ecDeptBoxes=distMap[item]?.EC?.deptBoxes||0;
     }
+    // 棚卸日以降の調貨を適用（EC）
+    if(ecHasStockGlobal){
+      Object.keys(transferCache).filter(date=>date>=ecStocktakeDate&&date<=d).sort().forEach(date=>{
+        (transferCache[date]||[]).forEach(t=>{
+          if(t.item!==item) return;
+          const units=t.units||(t.boxes||0)*ecBoxQty;
+          if(t.from==='EC'){
+            const total=ecOwnBoxes*ecBoxQty+ecLoose-units;
+            if(total<=0){ecOwnBoxes=0;ecLoose=0;} else {ecOwnBoxes=Math.floor(total/ecBoxQty);ecLoose=total%ecBoxQty;}
+          }
+          if(t.to==='EC'&&t.from!=='VT百貨'){
+            const total=ecOwnBoxes*ecBoxQty+ecLoose+units;
+            ecOwnBoxes=Math.floor(total/ecBoxQty);ecLoose=total%ecBoxQty;
+          }
+        });
+      });
+    }
 
     // 百貨通路の生データ（自社百貨箱数）＋ EC倉に紐づく百貨分
     const deptItem=chStocks['VT百貨'][item]||null;
-    const deptOwnBoxes=(deptItem&&(deptItem.boxes||0)>0)?(deptItem.boxes||0):(distMap[item]?.['VT百貨']?.boxes||0);
+    let deptOwnBoxes=(deptItem&&(deptItem.boxes||0)>0)?(deptItem.boxes||0):(distMap[item]?.['VT百貨']?.boxes||0);
+    let deptLoose=(deptItem&&(deptItem.boxes||0)>0)?(deptItem.loose||0):0;
+    // 棚卸日以降の調貨を適用（百貨）
+    if(deptHasStock){
+      Object.keys(transferCache).filter(date=>date>=deptStocktakeDate&&date<=d).sort().forEach(date=>{
+        (transferCache[date]||[]).forEach(t=>{
+          if(t.item!==item) return;
+          const units=t.units||(t.boxes||0)*deptBoxQty;
+          if(t.from==='VT百貨'){
+            const total=deptOwnBoxes*deptBoxQty+deptLoose-units;
+            if(total<=0){deptOwnBoxes=0;deptLoose=0;} else {deptOwnBoxes=Math.floor(total/deptBoxQty);deptLoose=total%deptBoxQty;}
+          }
+          if(t.to==='VT百貨'){
+            const total=deptOwnBoxes*deptBoxQty+deptLoose+units;
+            deptOwnBoxes=Math.floor(total/deptBoxQty);deptLoose=total%deptBoxQty;
+          }
+        });
+      });
+    }
     const deptTotalBoxes=deptOwnBoxes+ecDeptBoxes;
     const deptVal=deptTotalBoxes*deptBoxQty*price;
     channelData['VT百貨'].boxes+=deptTotalBoxes; channelData['VT百貨'].value+=deptVal;
@@ -3310,6 +3351,12 @@ window.renderGuestAnalytics=async function(){
   try{ const snap2=await get(ref(db,'transferHistory')); transferCache=snap2.val()||{}; }catch(e){}
   const distMap=calcDistMapWithTransfer(d);
 
+  // 棚卸日以降の調貨を適用するための基準日
+  const deptHasStock=Object.keys(chStocks['VT百貨']).length>0;
+  const ecHasStockGlobal=Object.keys(chStocks['EC']).length>0;
+  const deptStocktakeDate=deptHasStock?await getChannelStockDate('VT百貨',d):'0000-00-00';
+  const ecStocktakeDate=ecHasStockGlobal?await getChannelStockDate('EC',d):'0000-00-00';
+
   // 通路別・品牌別の箱数と金額を集計
   const channelData={};
   const brandData={};
@@ -3320,8 +3367,8 @@ window.renderGuestAnalytics=async function(){
 
   CP_BRANDS_CONFIG.forEach(br=>br.items.forEach(item=>{
     const p=priceMap[item]||{};
-    const ecBoxQty=p.ecQty||p.qty||0;
-    const deptBoxQty=p.qty||0;
+    const ecBoxQty=p.ecQty||p.qty||1;
+    const deptBoxQty=p.qty||1;
     const price=p.price||0;
 
     // EC通路の生データ（自社EC箱数・バラ・EC倉に紐づく百貨分の箱数）
@@ -3334,10 +3381,45 @@ window.renderGuestAnalytics=async function(){
       ecOwnBoxes=distMap[item]?.EC?.boxes||0; ecLoose=0;
       ecDeptBoxes=distMap[item]?.EC?.deptBoxes||0;
     }
+    // 棚卸日以降の調貨を適用（EC）
+    if(ecHasStockGlobal){
+      Object.keys(transferCache).filter(date=>date>=ecStocktakeDate&&date<=d).sort().forEach(date=>{
+        (transferCache[date]||[]).forEach(t=>{
+          if(t.item!==item) return;
+          const units=t.units||(t.boxes||0)*ecBoxQty;
+          if(t.from==='EC'){
+            const total=ecOwnBoxes*ecBoxQty+ecLoose-units;
+            if(total<=0){ecOwnBoxes=0;ecLoose=0;} else {ecOwnBoxes=Math.floor(total/ecBoxQty);ecLoose=total%ecBoxQty;}
+          }
+          if(t.to==='EC'&&t.from!=='VT百貨'){
+            const total=ecOwnBoxes*ecBoxQty+ecLoose+units;
+            ecOwnBoxes=Math.floor(total/ecBoxQty);ecLoose=total%ecBoxQty;
+          }
+        });
+      });
+    }
 
     // 百貨通路の生データ（自社百貨箱数）＋ EC倉に紐づく百貨分
     const deptItem=chStocks['VT百貨'][item]||null;
-    const deptOwnBoxes=(deptItem&&(deptItem.boxes||0)>0)?(deptItem.boxes||0):(distMap[item]?.['VT百貨']?.boxes||0);
+    let deptOwnBoxes=(deptItem&&(deptItem.boxes||0)>0)?(deptItem.boxes||0):(distMap[item]?.['VT百貨']?.boxes||0);
+    let deptLoose=(deptItem&&(deptItem.boxes||0)>0)?(deptItem.loose||0):0;
+    // 棚卸日以降の調貨を適用（百貨）
+    if(deptHasStock){
+      Object.keys(transferCache).filter(date=>date>=deptStocktakeDate&&date<=d).sort().forEach(date=>{
+        (transferCache[date]||[]).forEach(t=>{
+          if(t.item!==item) return;
+          const units=t.units||(t.boxes||0)*deptBoxQty;
+          if(t.from==='VT百貨'){
+            const total=deptOwnBoxes*deptBoxQty+deptLoose-units;
+            if(total<=0){deptOwnBoxes=0;deptLoose=0;} else {deptOwnBoxes=Math.floor(total/deptBoxQty);deptLoose=total%deptBoxQty;}
+          }
+          if(t.to==='VT百貨'){
+            const total=deptOwnBoxes*deptBoxQty+deptLoose+units;
+            deptOwnBoxes=Math.floor(total/deptBoxQty);deptLoose=total%deptBoxQty;
+          }
+        });
+      });
+    }
     const deptTotalBoxes=deptOwnBoxes+ecDeptBoxes;
     const deptVal=deptTotalBoxes*deptBoxQty*price;
     channelData['VT百貨'].boxes+=deptTotalBoxes; channelData['VT百貨'].value+=deptVal;
